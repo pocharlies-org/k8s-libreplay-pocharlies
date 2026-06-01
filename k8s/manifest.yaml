@@ -287,6 +287,6 @@ spec:
         - name: libreplay-web
           port: 80
       middlewares:
-        - { name: authelia, namespace: authelia }
+        - { name: sso-chain, namespace: keycloak }
   tls:
     store: { name: default, namespace: traefik-lan }
