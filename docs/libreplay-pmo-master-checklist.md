@@ -25,7 +25,7 @@ Target: `https://libreplay.lan.e-dani.com`
 
 ## Source / Build
 
-- [x] LAN demo source committed. Evidence: `/home/dibanez/k8s/libreplay` commits `986ceec feat: enable LAN demo rollout`, `6b7f750 fix: run LAN seed without corepack cache`, and `ef82708 fix: point LAN seed to bundled tsx` pushed to `origin/main`.
+- [x] LAN demo source committed. Evidence: `/home/dibanez/k8s/libreplay` commits `986ceec feat: enable LAN demo rollout`, `6b7f750 fix: run LAN seed without corepack cache`, `ef82708 fix: point LAN seed to bundled tsx`, and `15da141 fix: make LAN seed source readable` pushed to `origin/main`.
 - [x] `pnpm typecheck`. Evidence: exited 0 on 2026-06-19.
 - [x] `pnpm test`. Evidence: exited 0; config 4 tests, security 7 tests, auth no-tests pass, web 5 tests.
 - [x] `pnpm lint`. Evidence: exited 0; one pre-existing Next font warning only.
@@ -36,8 +36,8 @@ Target: `https://libreplay.lan.e-dani.com`
 
 - [x] Web image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:sha-6b7f75034835@sha256:925f4135f8f0a38e45bffc013657f3500408f478e3a98b1f75e0b670d223c935`.
 - [x] Migrate tools image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:tools-sha-6b7f75034835@sha256:111b84a84c0b569cdd979bb890fc95c710e28954cfc5f90e83417febe9723e3e`.
-- [x] Seed image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:seed-sha-ef8270832d01@sha256:62a523b3de546e26654c2560145e78b7425f38a5f96c8736b951f55e776c9006`.
-- [x] Image labels match source. Evidence: web/tools returned revision `6b7f75034835e46f5bc0100b491e6e02ed591922`; seed returned `ef8270832d01e7185bb76dd5a1a37b53b286543f`.
+- [x] Seed image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:seed-sha-15da141534f1@sha256:d1c44a5a95ae5330f8f1ce42b25412f88d702b65bee3dc58ce872e67142bfa77`.
+- [x] Image labels match source. Evidence: web/tools returned revision `6b7f75034835e46f5bc0100b491e6e02ed591922`; seed returned `15da141534f1d75c4d638940113875b02e2aba00`.
 
 ## GitOps
 
@@ -46,7 +46,7 @@ Target: `https://libreplay.lan.e-dani.com`
 - [x] Datastores scale to one replica. Evidence: StatefulSet/Deployments for Postgres, Redis, Meili and MinIO use `replicas: 1`.
 - [x] DB fresh target is `libreplay_lan`. Evidence: Postgres `POSTGRES_DB=libreplay_lan`; `libreplay-db-init` creates DB if existing PVC lacks it.
 - [x] MinIO bucket init is explicit. Evidence: `Job/libreplay-minio-init`.
-- [x] Migrate and seed are real Jobs. Evidence: `Job/libreplay-db-migrate-6b7f750` and `Job/libreplay-db-seed-ef82708`.
+- [x] Migrate and seed are real Jobs. Evidence: `Job/libreplay-db-migrate-6b7f750` and `Job/libreplay-db-seed-15da141`.
 - [x] Job memory limits present. Evidence: all Jobs set memory requests/limits.
 - [x] Server-side manifest dry-run passes. Evidence: `kubectl apply --server-side --force-conflicts --dry-run=server -f k8s/manifest.yaml` exited 0.
 - [blocked] Live Argo sync pending. Blocker: GitOps commit/push and runtime secrets still pending at this checklist revision.

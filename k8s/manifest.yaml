@@ -441,7 +441,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: libreplay-db-seed-ef82708
+  name: libreplay-db-seed-15da141
   namespace: libreplay
   annotations:
     argocd.argoproj.io/sync-wave: "3"
@@ -460,7 +460,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: seed
-          image: harbor.e-dani.com/homelab/libreplay-web:seed-sha-ef8270832d01@sha256:62a523b3de546e26654c2560145e78b7425f38a5f96c8736b951f55e776c9006
+          image: harbor.e-dani.com/homelab/libreplay-web:seed-sha-15da141534f1@sha256:d1c44a5a95ae5330f8f1ce42b25412f88d702b65bee3dc58ce872e67142bfa77
           env:
             - name: DATABASE_URL
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
