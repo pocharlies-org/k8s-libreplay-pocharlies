@@ -18,6 +18,8 @@ kind: ExternalSecret
 metadata:
   name: libreplay-secrets
   namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   refreshInterval: 1h
   secretStoreRef: { name: vault-backend, kind: ClusterSecretStore }
@@ -48,6 +50,9 @@ data:
   DEFAULT_LOCALE: es
   SUPPORTED_LOCALES: es,en,fr,de,pt
   RATE_LIMIT_DISABLED: "false"
+  ENABLE_LAN_DEMO_LOGIN: "true"
+  LAN_DEMO_ALLOWED_HOSTS: libreplay.lan.e-dani.com
+  LAN_DEMO_ALLOWED_CIDRS: 127.0.0.1/32,::1/128,100.64.0.0/10,192.168.0.0/16
   USE_MOCK_OAUTH: "true"
   ENABLE_MOCK_PAYMENTS: "true"
   ENABLE_MOCK_AGE_VERIFICATION: "true"
@@ -79,7 +84,7 @@ metadata:
   namespace: libreplay
 spec:
   serviceName: libreplay-postgres
-  replicas: 0
+  replicas: 1
   selector: { matchLabels: { app: libreplay-postgres } }
   template:
     metadata: { labels: { app: libreplay-postgres } }
@@ -94,7 +99,7 @@ spec:
           image: postgres:16-alpine
           ports: [{ name: postgres, containerPort: 5432 }]
           env:
-            - { name: POSTGRES_DB, value: libreplay }
+            - { name: POSTGRES_DB, value: libreplay_lan }
             - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
             - name: POSTGRES_USER
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DB_USER } }
@@ -106,7 +111,7 @@ spec:
             requests: { cpu: 100m, memory: 128Mi }
             limits:   { memory: 1Gi }
           readinessProbe:
-            exec: { command: [pg_isready, -U, libreplay, -d, libreplay] }
+            exec: { command: [sh, -lc, 'pg_isready -U "$POSTGRES_USER" -d libreplay_lan'] }
             initialDelaySeconds: 5
             periodSeconds: 10
       volumes:
@@ -128,7 +133,7 @@ metadata:
   name: libreplay-redis
   namespace: libreplay
 spec:
-  replicas: 0
+  replicas: 1
   strategy: { type: Recreate }
   selector: { matchLabels: { app: libreplay-redis } }
   template:
@@ -171,7 +176,7 @@ metadata:
   name: libreplay-meilisearch
   namespace: libreplay
 spec:
-  replicas: 0
+  replicas: 1
   strategy: { type: Recreate }
   selector: { matchLabels: { app: libreplay-meilisearch } }
   template:
@@ -223,7 +228,7 @@ metadata:
   name: libreplay-minio
   namespace: libreplay
 spec:
-  replicas: 0
+  replicas: 1
   strategy: { type: Recreate }
   selector: { matchLabels: { app: libreplay-minio } }
   template:
@@ -263,9 +268,49 @@ spec:
   ports:
     - { name: api, port: 9000, targetPort: 9000 }
     - { name: console, port: 9001, targetPort: 9001 }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: libreplay-minio-init
+  namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-options: Replace=true
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels: { app: libreplay-minio-init }
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      containers:
+        - name: minio-init
+          image: minio/mc:RELEASE.2024-09-16T17-43-14Z
+          envFrom:
+            - configMapRef: { name: libreplay-config }
+          env:
+            - name: MINIO_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_ACCESS_KEY } }
+            - name: MINIO_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_SECRET_KEY } }
+          command: [sh, -lc]
+          args:
+            - |
+              set -eu
+              until mc alias set local "${MINIO_ENDPOINT}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}" >/dev/null 2>&1; do
+                echo "waiting for MinIO"
+                sleep 2
+              done
+              mc mb -p "local/${MINIO_BUCKET}" || true
+          resources:
+            requests: { cpu: 20m, memory: 64Mi }
+            limits:   { memory: 256Mi }
 
 # ── LibreReplay web (stateless) ───────────────────────────────────────────────
-# Scale to 0 until Phase 9 data migration completes
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -274,8 +319,10 @@ metadata:
   namespace: libreplay
   annotations:
     argocd.argoproj.io/sync-options: Replace=true
+    argocd.argoproj.io/sync-wave: "4"
 spec:
-  replicas: 0   # scale to 1 after Phase 9 stores seeded
+  replicas: 1
+  revisionHistoryLimit: 1
   selector: { matchLabels: { app: libreplay-web } }
   template:
     metadata: { labels: { app: libreplay-web } }
@@ -286,7 +333,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-c275fb3@sha256:541f9b468f72cc81c5cc93cc0821ee9630a20052cc2e7d08b0a11c8872ff3c9b
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-986ceec2b562@sha256:2c6c3beef8035bb68ef7528e395261f894a61e4e411b073cbee82681a74c3c01
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -323,13 +370,58 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: libreplay-db-migrate
+  name: libreplay-db-init
   namespace: libreplay
   annotations:
-    libreplay.e-dani.com/manual-gate: "suspended; requires backup, secrets and approval before unsuspend"
+    argocd.argoproj.io/sync-options: Replace=true
+    argocd.argoproj.io/sync-wave: "1"
 spec:
-  suspend: true
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels: { app: libreplay-db-init }
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      containers:
+        - name: db-init
+          image: postgres:16-alpine
+          env:
+            - { name: DB_NAME, value: libreplay_lan }
+            - name: DB_USER
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DB_USER } }
+            - name: PGPASSWORD
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DB_PASSWORD } }
+          command: [sh, -lc]
+          args:
+            - |
+              set -eu
+              until pg_isready -h libreplay-postgres -U "${DB_USER}" >/dev/null 2>&1; do
+                echo "waiting for Postgres"
+                sleep 2
+              done
+              exists="$(psql -h libreplay-postgres -U "${DB_USER}" -d postgres -Atc "select 1 from pg_database where datname='${DB_NAME}'")"
+              if [ "${exists}" != "1" ]; then
+                createdb -h libreplay-postgres -U "${DB_USER}" "${DB_NAME}"
+              fi
+          resources:
+            requests: { cpu: 20m, memory: 64Mi }
+            limits:   { memory: 256Mi }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: libreplay-db-migrate-986ceec
+  namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-options: Replace=true
+    argocd.argoproj.io/sync-wave: "2"
+    libreplay.e-dani.com/lan-demo: "migrate libreplay_lan"
+spec:
   backoffLimit: 0
+  activeDeadlineSeconds: 600
   template:
     metadata:
       labels: { app: libreplay-db-migrate }
@@ -341,21 +433,26 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: migrate
-          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-c275fb3@sha256:27a897c20e184f276ef701512083d464fb4731af0243816bf9995583e8749630
+          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-986ceec2b562@sha256:85f74176ca362c52cd83d20fa979bf41ec876ede63716ed21e0ab948aa0c4384
           env:
             - name: DATABASE_URL
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { memory: 512Mi }
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: libreplay-db-seed
+  name: libreplay-db-seed-986ceec
   namespace: libreplay
   annotations:
-    libreplay.e-dani.com/manual-gate: "blocked; seed image/runbook and data approval required"
+    argocd.argoproj.io/sync-options: Replace=true
+    argocd.argoproj.io/sync-wave: "3"
+    libreplay.e-dani.com/lan-demo: "fresh idempotent seed; no previous data import"
 spec:
-  suspend: true
   backoffLimit: 0
+  activeDeadlineSeconds: 900
   template:
     metadata:
       labels: { app: libreplay-db-seed }
@@ -367,12 +464,15 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: seed
-          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-c275fb3@sha256:27a897c20e184f276ef701512083d464fb4731af0243816bf9995583e8749630
-          command: [sh, -lc]
-          args:
-            - |
-              echo "Seed job blocked: seed-capable image and approved seed runbook required." >&2
-              exit 1
+          image: harbor.e-dani.com/homelab/libreplay-web:seed-sha-986ceec2b562@sha256:e27e49e348fff6d3ab86219d08e2af767214493e139aae1a818c7c9bfd6f1e0d
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
+            - name: SEED_USER_PASSWORD
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SEED_USER_PASSWORD } }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { memory: 512Mi }
 ---
 apiVersion: v1
 kind: Service

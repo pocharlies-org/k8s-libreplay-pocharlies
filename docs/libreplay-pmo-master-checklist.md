@@ -1,84 +1,68 @@
 # LibrePlay PMO Master Checklist
 
-Status: `BLOCKED-STAGING-GATES`
-Last updated: 2026-06-18
+Status: `LAN-ROLLOUT-IN-PROGRESS`
+Last updated: 2026-06-19
+Target: `https://libreplay.lan.e-dani.com`
 
 ## Directives
 
-- [x] No tocar produccion, PVCs, datos ni secrets sin aprobacion. Evidence: no `kubectl apply`, `kubectl scale`, secret edit, PVC/data mutation or workload start was executed; all runtime changes stayed in git/manifests and dry-run checks.
-- [x] No usar memoria como evidencia unica. Evidence: Brain search returned no actionable match in this session; repo, Harbor and cluster state were verified with commands.
-- [x] Mantener workloads dormidos. Evidence: GitOps keeps all Deployments/StatefulSets at `replicas: 0`; live cluster shows all workloads `0/0`, no pods/endpoints, and migration/seed Jobs `Suspended`.
-- [x] Prohibir `latest` in GitOps. Evidence: `.github/workflows/ci.yml` has `no-latest-images`; `grep -RInE 'image: .+:latest($|[[:space:]])' k8s` returned no matches.
-- [x] Registrar evidencia de source, imagen, GitOps y blockers. Evidence: this file plus commits and image digests below.
-- [x] Finalizar con estado explicito. Evidence: status is `BLOCKED-STAGING-GATES`.
+- [x] No exposicion publica; solo LAN/SSO existente. Evidence: `k8s/manifest.yaml` keeps only `IngressRoute/libreplay-lan`.
+- [x] No importar ni borrar datos antiguos. Evidence: rollout uses database `libreplay_lan`; no PVC deletion or data import is encoded.
+- [x] Sin passwords para usuarios/QA. Evidence: source commit `986ceec2b562...` uses `/api/auth/demo-login`; Playwright no longer references `SEED_AI_USER_PASSWORD` or `E2E_TEST_PASSWORD`.
+- [x] Secrets internos siguen en secrets. Evidence: manifest reads `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, MinIO, Meili and `SEED_USER_PASSWORD` from `libreplay-secrets`.
+- [x] Mocks visibles como LAN/no-prod. Evidence: ConfigMap enables mock flags; UI has demo/no-prod panel and creator/payment mock copy.
+- [blocked] No cerrar con pods caidos, 404s, buttons mudos, skips criticos or missing secrets. Blocker: rollout and Playwright LAN are still pending.
 
-## Phase 0 - PMO Setup
+## Acceptance Criteria
 
-- [x] Create checklist master. Evidence: `docs/libreplay-pmo-master-checklist.md`.
-- [x] Identify repos and paths. Evidence: source repo `/home/dibanez/k8s/libreplay`; GitOps repo `/home/dibanez/k8s/k8s-libreplay-pocharlies`; Argo app lives in `/home/dibanez/k8s/k8s-gitops-pocharlies/apps/libreplay.yaml`.
-- [x] Confirm standby cluster. Evidence: live `libreplay-web` had `replicas=0` and image `harbor.e-dani.com/homelab/libreplay-web:latest` before GitOps commit; no pods were started.
+- [ ] Argo `libreplay` `Synced/Healthy`. Evidence required: `kubectl -n argocd get application libreplay`.
+- [ ] Pods ready: Postgres, Redis, MinIO, Meili, web. Evidence required: `kubectl -n libreplay get pod,endpointslice -o wide`.
+- [ ] `/api/health` and `/api/health/deps` return 200. Evidence required: LAN `curl`.
+- [ ] Demo login works for member, moderator, admin, creator, club owner and newbie without typing passwords. Evidence required: API/UI smoke plus Playwright projects.
+- [ ] Feed, discover, friends, messages, profiles, groups, clubs, dates, events, forum, blog, map, creator, admin, verification mock and payments mock work. Evidence required: full Playwright LAN report.
+- [ ] Playwright LAN full suite passes with trace/screenshot/video and zero critical skips. Evidence required: JSON stats unexpected=0, flaky=0, skipped=0.
+- [ ] Checklist final updated with commands, outputs and resolved blockers. Evidence required: this file updated at closeout.
 
-## Phase 1 - Source Control
+## Source / Build
 
-- [x] Version source as private repo. Evidence: GitHub repo `pocharlies/libreplay`, branch `main`, final source commit `c275fb3`.
-- [x] Exclude local/secrets/build artifacts. Evidence: `.gitignore` and `.dockerignore` exclude `.env*`, `.next`, `node_modules`, auth state, reports and local data directories.
-- [x] Preserve source copy provenance. Evidence: source was copied from `sauvage:/home/ubuntu/sauvage` to `/home/dibanez/k8s/libreplay` before git initialization.
-
-## Phase 2 - Build / CI
-
-- [x] Add Next standalone Dockerfile. Evidence: `/home/dibanez/k8s/libreplay/Dockerfile` builds `runner` target for web.
-- [x] Add migration tools target. Evidence: Dockerfile `tools` target is migration-only with Prisma CLI and `packages/db/prisma`; seed is not bundled.
-- [x] Add CI workflow. Evidence: `.github/workflows/ci.yml` runs install, Prisma generate, typecheck, tests, web build and Docker target smoke builds.
-- [x] Add release workflow. Evidence: `.github/workflows/release.yml` pushes web tags and `tools-*` tags to Harbor repo `homelab/libreplay-web`.
-- [blocked] GitHub Actions completion. Blocker: ARC/GitHub runs were queued during this session; local gates and manual Harbor push were used as evidence instead.
-
-## Phase 3 - Local Verification
-
-- [x] `pnpm typecheck`. Evidence: exited 0.
+- [x] LAN demo source committed. Evidence: `/home/dibanez/k8s/libreplay` commit `986ceec feat: enable LAN demo rollout` pushed to `origin/main`.
+- [x] `pnpm typecheck`. Evidence: exited 0 on 2026-06-19.
 - [x] `pnpm test`. Evidence: exited 0; config 4 tests, security 7 tests, auth no-tests pass, web 5 tests.
-- [x] `pnpm --filter @libreplay/web build`. Evidence: exited 0 and produced Next route manifest including `/api/health`.
-- [x] Docker web build. Evidence: `docker build --target runner` for final tag exited 0.
-- [x] Docker tools build. Evidence: `docker run --rm --entrypoint sh libreplay-tools:ci -lc 'whoami && test -f packages/db/prisma/schema.prisma && test -d packages/db/prisma/migrations && prisma --version'` exited 0 as user `libreplay`.
+- [x] `pnpm lint`. Evidence: exited 0; one pre-existing Next font warning only.
+- [x] `pnpm --filter @libreplay/web build`. Evidence: exited 0 and generated routes including `/api/auth/demo-login`, `/api/health/deps`, `/api/media/upload/[id]`.
+- [x] Docker runner/tools/seed smoke builds. Evidence: local `docker build --target runner|tools|seed` exited 0.
 
-## Phase 4 - Images / Harbor
+## Images / Harbor
 
-- [x] Web image pushed with immutable tag and digest. Evidence: `harbor.e-dani.com/homelab/libreplay-web:sha-c275fb3@sha256:541f9b468f72cc81c5cc93cc0821ee9630a20052cc2e7d08b0a11c8872ff3c9b`.
-- [x] Migration tools image pushed with immutable tag and digest. Evidence: `harbor.e-dani.com/homelab/libreplay-web:tools-sha-c275fb3@sha256:27a897c20e184f276ef701512083d464fb4731af0243816bf9995583e8749630`.
-- [x] Image labels match source. Evidence: `skopeo inspect` shows `org.opencontainers.image.revision=c275fb3` and source `https://github.com/pocharlies/libreplay` for both tags.
-- [x] Avoid separate tools repository. Evidence: pushing `homelab/libreplay-tools` hit Harbor `413 Payload Too Large`; release workflow now publishes tools tags inside `homelab/libreplay-web`.
+- [x] Web image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:sha-986ceec2b562@sha256:2c6c3beef8035bb68ef7528e395261f894a61e4e411b073cbee82681a74c3c01`.
+- [x] Migrate tools image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:tools-sha-986ceec2b562@sha256:85f74176ca362c52cd83d20fa979bf41ec876ede63716ed21e0ab948aa0c4384`.
+- [x] Seed image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:seed-sha-986ceec2b562@sha256:e27e49e348fff6d3ab86219d08e2af767214493e139aae1a818c7c9bfd6f1e0d`.
+- [x] Image labels match source. Evidence: `skopeo inspect --no-tags` returned revision `986ceec2b562ee828dbe6f828b0ed459f67c5b78` for all three tags.
 
-## Phase 5 - GitOps
+## GitOps
 
-- [x] Pin web image by digest. Evidence: `k8s/manifest.yaml` and live Deployment use `sha-c275fb3@sha256:541f9b...`.
-- [x] Add `imagePullSecrets`. Evidence: web and manual Jobs reference `harbor-pull`.
-- [x] Align env var names with `packages/config/src/env.ts`. Evidence: ConfigMap uses `MEILISEARCH_HOST`, URL-form `MINIO_ENDPOINT`, `AUTH_URL`, locale and mock flags; app secrets use explicit `secretKeyRef`.
-- [x] Add suspended migration Job. Evidence: `libreplay-db-migrate` uses tools digest and `suspend: true`.
-- [x] Add suspended seed placeholder Job. Evidence: `libreplay-db-seed` is `suspend: true` and intentionally exits with a blocker message if unsuspended.
-- [x] Validate manifest schema/policy without live conflicts. Evidence: namespace-rewritten `kubectl apply --dry-run=server -f -` against `default` exited 0.
-- [x] Validate live web replacement path. Evidence: extracting `libreplay-web` Deployment and running `kubectl replace --dry-run=server -f -` exited 0.
-- [x] Argo sync reached desired GitOps revision. Evidence: Application `argocd/libreplay` is `Synced`, revision `06d9f0e06e36dab2b90a3bb9a698f52c016f54de`, operation `Succeeded`.
-- [x] Argo health reflects suspended Jobs, not a running outage. Evidence: Application health is `Suspended`; live Jobs `libreplay-db-migrate` and `libreplay-db-seed` are intentionally `suspend: true`.
-- [blocked] Plain live `kubectl apply --dry-run=server -f k8s/manifest.yaml`. Blocker: existing live Deployment lacks `last-applied` and client-side apply merges old `value` with new `valueFrom`; resource is annotated `argocd.argoproj.io/sync-options: Replace=true` for Argo.
-- [blocked] `harbor-pull` secret readiness. Blocker: namespace currently lacks `harbor-pull`; no secret was created by this session.
-- [blocked] Runtime secret contract readiness. Blocker: live `libreplay-secrets` currently exposes only `DB_PASSWORD`, `DB_USER`, `MEILI_MASTER_KEY`, `MINIO_ROOT_PASSWORD`, `MINIO_ROOT_USER`; required app keys like `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MEILISEARCH_API_KEY` are not present yet.
+- [x] Work is on Argo target branch. Evidence: repo branch `deploy/prod`, Argo target revision previously verified as `deploy/prod`.
+- [x] Web image pinned by digest; no `latest`. Evidence: `k8s/manifest.yaml`.
+- [x] Datastores scale to one replica. Evidence: StatefulSet/Deployments for Postgres, Redis, Meili and MinIO use `replicas: 1`.
+- [x] DB fresh target is `libreplay_lan`. Evidence: Postgres `POSTGRES_DB=libreplay_lan`; `libreplay-db-init` creates DB if existing PVC lacks it.
+- [x] MinIO bucket init is explicit. Evidence: `Job/libreplay-minio-init`.
+- [x] Migrate and seed are real Jobs. Evidence: `Job/libreplay-db-migrate-986ceec` and `Job/libreplay-db-seed-986ceec`.
+- [x] Job memory limits present. Evidence: all Jobs set memory requests/limits.
+- [x] Server-side manifest dry-run passes. Evidence: `kubectl apply --server-side --force-conflicts --dry-run=server -f k8s/manifest.yaml` exited 0.
+- [blocked] Live Argo sync pending. Blocker: GitOps commit/push and runtime secrets still pending at this checklist revision.
 
-## Phase 6 - Runtime / Data
+## Runtime Secrets
 
-- [blocked] Scale-up. Blocker: not authorized; secrets, pull secret, data migration and seed approval are incomplete.
-- [blocked] DB migration execution. Blocker: backups/counts/checksums and approval missing; migration Job remains suspended.
-- [blocked] Seed execution. Blocker: seed-capable image/runbook and data approval missing; seed Job remains suspended and intentionally blocked.
-- [blocked] Smoke runtime. Blocker: no pods were started; `/api/health` was verified only via local container smoke before final image churn, not live cluster.
+- [ ] `harbor-pull` exists in namespace `libreplay`. Evidence required: `kubectl -n libreplay get secret harbor-pull`.
+- [ ] Vault/ExternalSecret exposes required app keys. Evidence required: key names only from `kubectl -n libreplay get secret libreplay-secrets`.
+- [ ] Generated internal secrets are not printed or committed. Evidence required: command history/log review; no secret values in git.
 
-## Phase 7 - Product / Security / Compliance
-
-- [x] Staging mocks documented. Evidence: ConfigMap keeps mock OAuth/payments/age/face/CSAM/media moderation flags enabled and visible.
-- [blocked] Production readiness. Blocker: payments, KYC/age, face liveness, CSAM/media moderation, LLM provider, +18 legal/privacy/GDPR and escalation process remain unresolved.
-- [x] Public exposure unchanged. Evidence: existing LAN/SSO IngressRoute only; no public route added.
+Required keys: `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`, `MEILISEARCH_API_KEY`, `DB_USER`, `DB_PASSWORD`, `SEED_USER_PASSWORD`.
 
 ## Specialist Checks
 
-- [x] Research/PMO pass. Evidence: source, GitOps, cluster and image state revalidated locally.
-- [x] DevOps/SRE verifier pass. Evidence: independent read-only pass identified `harbor-pull`, `latest`, digest pinning, env and migration gates.
-- [x] Backend/build pass. Evidence: typecheck/test/build/Docker gates passed.
-- [x] Security pass. Evidence: no secrets committed, no secret values read into files, no production exposure added.
-- [blocked] Independent runtime QA. Blocker: staging runtime remains intentionally scaled to zero.
+- [x] Research/PMO pass. Evidence: memory source `rollout-2026-06-18T18-26-33...` used as clue and revalidated with repo/cluster commands.
+- [x] DevOps read-only pass. Evidence: subagent reported blockers: missing `harbor-pull`, incomplete secret contract, job policy failures, no endpoints.
+- [x] QA/Security read-only pass. Evidence: subagent reported blockers: local source not deployed, demo session risk, missing Playwright demo coverage.
+- [x] Backend/frontend implementation pass. Evidence: demo login, health deps, upload proxy, seed and Playwright role projects implemented in commit `986ceec`.
+- [ ] Runtime verification pass. Evidence required: Argo, pods, health, smoke and Playwright LAN outputs.
