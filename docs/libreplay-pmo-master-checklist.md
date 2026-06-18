@@ -7,7 +7,7 @@ Last updated: 2026-06-18
 
 - [x] No tocar produccion, PVCs, datos ni secrets sin aprobacion. Evidence: no `kubectl apply`, `kubectl scale`, secret edit, PVC/data mutation or workload start was executed; all runtime changes stayed in git/manifests and dry-run checks.
 - [x] No usar memoria como evidencia unica. Evidence: Brain search returned no actionable match in this session; repo, Harbor and cluster state were verified with commands.
-- [x] Mantener workloads dormidos. Evidence: GitOps keeps all Deployments/StatefulSets at `replicas: 0`; migration/seed Jobs are `suspend: true`.
+- [x] Mantener workloads dormidos. Evidence: GitOps keeps all Deployments/StatefulSets at `replicas: 0`; live cluster shows all workloads `0/0`, no pods/endpoints, and migration/seed Jobs `Suspended`.
 - [x] Prohibir `latest` in GitOps. Evidence: `.github/workflows/ci.yml` has `no-latest-images`; `grep -RInE 'image: .+:latest($|[[:space:]])' k8s` returned no matches.
 - [x] Registrar evidencia de source, imagen, GitOps y blockers. Evidence: this file plus commits and image digests below.
 - [x] Finalizar con estado explicito. Evidence: status is `BLOCKED-STAGING-GATES`.
@@ -49,13 +49,15 @@ Last updated: 2026-06-18
 
 ## Phase 5 - GitOps
 
-- [x] Pin web image by digest. Evidence: `k8s/manifest.yaml` uses `sha-c275fb3@sha256:541f9b...`.
+- [x] Pin web image by digest. Evidence: `k8s/manifest.yaml` and live Deployment use `sha-c275fb3@sha256:541f9b...`.
 - [x] Add `imagePullSecrets`. Evidence: web and manual Jobs reference `harbor-pull`.
 - [x] Align env var names with `packages/config/src/env.ts`. Evidence: ConfigMap uses `MEILISEARCH_HOST`, URL-form `MINIO_ENDPOINT`, `AUTH_URL`, locale and mock flags; app secrets use explicit `secretKeyRef`.
 - [x] Add suspended migration Job. Evidence: `libreplay-db-migrate` uses tools digest and `suspend: true`.
 - [x] Add suspended seed placeholder Job. Evidence: `libreplay-db-seed` is `suspend: true` and intentionally exits with a blocker message if unsuspended.
 - [x] Validate manifest schema/policy without live conflicts. Evidence: namespace-rewritten `kubectl apply --dry-run=server -f -` against `default` exited 0.
 - [x] Validate live web replacement path. Evidence: extracting `libreplay-web` Deployment and running `kubectl replace --dry-run=server -f -` exited 0.
+- [x] Argo sync reached desired GitOps revision. Evidence: Application `argocd/libreplay` is `Synced`, revision `06d9f0e06e36dab2b90a3bb9a698f52c016f54de`, operation `Succeeded`.
+- [x] Argo health reflects suspended Jobs, not a running outage. Evidence: Application health is `Suspended`; live Jobs `libreplay-db-migrate` and `libreplay-db-seed` are intentionally `suspend: true`.
 - [blocked] Plain live `kubectl apply --dry-run=server -f k8s/manifest.yaml`. Blocker: existing live Deployment lacks `last-applied` and client-side apply merges old `value` with new `valueFrom`; resource is annotated `argocd.argoproj.io/sync-options: Replace=true` for Argo.
 - [blocked] `harbor-pull` secret readiness. Blocker: namespace currently lacks `harbor-pull`; no secret was created by this session.
 - [blocked] Runtime secret contract readiness. Blocker: live `libreplay-secrets` currently exposes only `DB_PASSWORD`, `DB_USER`, `MEILI_MASTER_KEY`, `MINIO_ROOT_PASSWORD`, `MINIO_ROOT_USER`; required app keys like `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MEILISEARCH_API_KEY` are not present yet.
