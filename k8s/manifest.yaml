@@ -275,7 +275,6 @@ metadata:
   name: libreplay-minio-init
   namespace: libreplay
   annotations:
-    argocd.argoproj.io/sync-options: Replace=true
     argocd.argoproj.io/sync-wave: "1"
 spec:
   backoffLimit: 3
@@ -373,7 +372,6 @@ metadata:
   name: libreplay-db-init
   namespace: libreplay
   annotations:
-    argocd.argoproj.io/sync-options: Replace=true
     argocd.argoproj.io/sync-wave: "1"
 spec:
   backoffLimit: 3
@@ -416,7 +414,6 @@ metadata:
   name: libreplay-db-migrate-986ceec
   namespace: libreplay
   annotations:
-    argocd.argoproj.io/sync-options: Replace=true
     argocd.argoproj.io/sync-wave: "2"
     libreplay.e-dani.com/lan-demo: "migrate libreplay_lan"
 spec:
@@ -447,7 +444,6 @@ metadata:
   name: libreplay-db-seed-986ceec
   namespace: libreplay
   annotations:
-    argocd.argoproj.io/sync-options: Replace=true
     argocd.argoproj.io/sync-wave: "3"
     libreplay.e-dani.com/lan-demo: "fresh idempotent seed; no previous data import"
 spec:
