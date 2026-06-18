@@ -52,7 +52,7 @@ data:
   RATE_LIMIT_DISABLED: "false"
   ENABLE_LAN_DEMO_LOGIN: "true"
   LAN_DEMO_ALLOWED_HOSTS: libreplay.lan.e-dani.com
-  LAN_DEMO_ALLOWED_CIDRS: 127.0.0.1/32,::1/128,100.64.0.0/10,192.168.0.0/16
+  LAN_DEMO_ALLOWED_CIDRS: 127.0.0.1/32,::1/128,10.0.0.0/8,100.64.0.0/10,172.16.0.0/12,192.168.0.0/16
   USE_MOCK_OAUTH: "true"
   ENABLE_MOCK_PAYMENTS: "true"
   ENABLE_MOCK_AGE_VERIFICATION: "true"
@@ -332,7 +332,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-6b7f75034835@sha256:925f4135f8f0a38e45bffc013657f3500408f478e3a98b1f75e0b670d223c935
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-406a234e1494@sha256:5630d7d5aba765a6683db5f54d52a2af4fe9f2cda6867ad307ac27438878b119
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
