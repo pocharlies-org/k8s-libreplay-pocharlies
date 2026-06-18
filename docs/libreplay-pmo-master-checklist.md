@@ -25,7 +25,7 @@ Target: `https://libreplay.lan.e-dani.com`
 
 ## Source / Build
 
-- [x] LAN demo source committed. Evidence: `/home/dibanez/k8s/libreplay` commits through `406a234 fix: run LAN demo web behind ingress` pushed to `origin/main`.
+- [x] LAN demo source committed. Evidence: `/home/dibanez/k8s/libreplay` commits through `a129bb5 fix: mock LAN oracle and playwright artifacts` pushed to `origin/main`.
 - [x] `pnpm typecheck`. Evidence: exited 0 on 2026-06-19.
 - [x] `pnpm test`. Evidence: exited 0; config 4 tests, security 7 tests, auth no-tests pass, web 5 tests.
 - [x] `pnpm lint`. Evidence: exited 0; one pre-existing Next font warning only.
@@ -34,10 +34,10 @@ Target: `https://libreplay.lan.e-dani.com`
 
 ## Images / Harbor
 
-- [x] Web image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:sha-406a234e1494@sha256:5630d7d5aba765a6683db5f54d52a2af4fe9f2cda6867ad307ac27438878b119`.
+- [x] Web image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:sha-a129bb501edf@sha256:850d56ee775e2b7a6bd3f6228938b0639ebb355384db241af532436ad25496ba`.
 - [x] Migrate tools image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:tools-sha-6b7f75034835@sha256:111b84a84c0b569cdd979bb890fc95c710e28954cfc5f90e83417febe9723e3e`.
 - [x] Seed image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:seed-sha-15da141534f1@sha256:d1c44a5a95ae5330f8f1ce42b25412f88d702b65bee3dc58ce872e67142bfa77`.
-- [x] Image labels match source. Evidence: web returned revision `406a234e14945c0a5af69fd19edf2068d6f43ed9`; tools returned `6b7f75034835e46f5bc0100b491e6e02ed591922`; seed returned `15da141534f1d75c4d638940113875b02e2aba00`.
+- [x] Image labels match source. Evidence: web returned revision `a129bb501edf1a08433462de31f8450fe7ffd186`; tools returned `6b7f75034835e46f5bc0100b491e6e02ed591922`; seed returned `15da141534f1d75c4d638940113875b02e2aba00`.
 
 ## GitOps
 
