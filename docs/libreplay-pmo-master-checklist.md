@@ -1,7 +1,7 @@
 # LibrePlay PMO Master Checklist
 
-Status: `LAN-ROLLOUT-IN-PROGRESS`
-Last updated: 2026-06-19
+Status: `LAN-DEMO-READY`
+Last updated: 2026-06-19 01:38 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 ## Directives
@@ -11,33 +11,34 @@ Target: `https://libreplay.lan.e-dani.com`
 - [x] Sin passwords para usuarios/QA. Evidence: source commit `986ceec2b562...` uses `/api/auth/demo-login`; Playwright no longer references `SEED_AI_USER_PASSWORD` or `E2E_TEST_PASSWORD`.
 - [x] Secrets internos siguen en secrets. Evidence: manifest reads `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, MinIO, Meili and `SEED_USER_PASSWORD` from `libreplay-secrets`.
 - [x] Mocks visibles como LAN/no-prod. Evidence: ConfigMap enables mock flags; UI has demo/no-prod panel and creator/payment mock copy.
-- [blocked] No cerrar con pods caidos, 404s, buttons mudos, skips criticos or missing secrets. Blocker: rollout and Playwright LAN are still pending.
+- [x] No cerrar con pods caidos, 404s, buttons mudos, skips criticos or missing secrets. Evidence: Argo `Synced/Healthy`, pods/endpoints ready, `libreplay-secrets` key contract present, Playwright LAN `73 passed`, `skipped=0`, `unexpected=0`, `flaky=0`.
 
 ## Acceptance Criteria
 
-- [ ] Argo `libreplay` `Synced/Healthy`. Evidence required: `kubectl -n argocd get application libreplay`.
-- [ ] Pods ready: Postgres, Redis, MinIO, Meili, web. Evidence required: `kubectl -n libreplay get pod,endpointslice -o wide`.
-- [ ] `/api/health` and `/api/health/deps` return 200. Evidence required: LAN `curl`.
-- [ ] Demo login works for member, moderator, admin, creator, club owner and newbie without typing passwords. Evidence required: API/UI smoke plus Playwright projects.
-- [ ] Feed, discover, friends, messages, profiles, groups, clubs, dates, events, forum, blog, map, creator, admin, verification mock and payments mock work. Evidence required: full Playwright LAN report.
-- [ ] Playwright LAN full suite passes with trace/screenshot/video and zero critical skips. Evidence required: JSON stats unexpected=0, flaky=0, skipped=0.
-- [ ] Checklist final updated with commands, outputs and resolved blockers. Evidence required: this file updated at closeout.
+- [x] Argo `libreplay` `Synced/Healthy`. Evidence: revision `05f3c349a4ed07d4e67e9c31fc2cf01ff7732f22`, sync `Synced`, health `Healthy`, phase `Succeeded`.
+- [x] Pods ready: Postgres, Redis, MinIO, Meili, web. Evidence: `kubectl -n libreplay get pods,jobs,deploy,endpointslice -o wide` shows Postgres/Redis/MinIO/Meili/web `1/1 Running`, jobs `Complete`, web endpoint `10.42.0.32:3000`.
+- [x] `/api/health` and `/api/health/deps` return 200. Evidence: `curl -sk .../api/health` and `.../api/health/deps` returned `HTTP 200`; deps checks postgres/redis/minio/meilisearch all `ok:true`.
+- [x] Demo login works for member, moderator, admin, creator, club owner and newbie without typing passwords. Evidence: API smoke returned `200` for member `/feed`, moderator `/admin`, admin `/admin`, creator `/creator/dashboard`, clubowner `/events/new`, newbie `/onboarding`; newbie repeated twice to prove reset/reusability.
+- [x] Feed, discover, friends, messages, profiles, groups, clubs, dates, events, forum, blog, map, creator, admin, verification mock and payments mock work. Evidence: full Playwright LAN suite passed all feature specs, including creator payments mock, verification mock, media upload proxy and role projects.
+- [x] Playwright LAN full suite passes with trace/screenshot/video and zero critical skips. Evidence: `/tmp/libreplay-playwright-results.json` stats `expected=73`, `unexpected=0`, `flaky=0`, `skipped=0`; artifacts: `73` trace zips, `72` screenshots, `72` videos, HTML report present. One API-only test has no page screenshot/video.
+- [x] Checklist final updated with commands, outputs and resolved blockers. Evidence: this file updated after final Argo, smoke, policy and Playwright verification.
 
 ## Source / Build
 
-- [x] LAN demo source committed. Evidence: `/home/dibanez/k8s/libreplay` commits through `59e0512 fix: make migrate files readable` pushed to `origin/main`.
+- [x] LAN demo source committed. Evidence: `/home/dibanez/k8s/libreplay` commits through `2365959 fix: make LAN demo e2e repeatable` pushed to `origin/main`.
+- [x] `pnpm install --frozen-lockfile`. Evidence: exited 0; lockfile up to date and already up to date.
 - [x] `pnpm typecheck`. Evidence: exited 0 on 2026-06-19.
-- [x] `pnpm test`. Evidence: exited 0; config 4 tests, security 7 tests, auth no-tests pass, web 5 tests.
+- [x] `pnpm test`. Evidence: exited 0; config 4 tests, security 7 tests, auth no-tests pass, web 8 tests.
 - [x] `pnpm lint`. Evidence: exited 0; one pre-existing Next font warning only.
 - [x] `pnpm --filter @libreplay/web build`. Evidence: exited 0 and generated routes including `/api/auth/demo-login`, `/api/health/deps`, `/api/media/upload/[id]`.
 - [x] Docker runner/tools/seed smoke builds. Evidence: local `docker build --target runner|tools|seed` exited 0.
 
 ## Images / Harbor
 
-- [x] Web image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:sha-a129bb501edf@sha256:850d56ee775e2b7a6bd3f6228938b0639ebb355384db241af532436ad25496ba`.
+- [x] Web image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:sha-23659593fb24@sha256:b4d043b93ce69ef4dba6da9c9f404700455a91576170d6e96c07891f38fcf122`.
 - [x] Migrate tools image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:tools-sha-59e051279464@sha256:d5183716a46f849f8f1df8676767f2c00a92cd5e29e1d2b1caf8bb51cbd029db`.
 - [x] Seed image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:seed-sha-15da141534f1@sha256:d1c44a5a95ae5330f8f1ce42b25412f88d702b65bee3dc58ce872e67142bfa77`.
-- [x] Image labels match source. Evidence: web returned revision `a129bb501edf1a08433462de31f8450fe7ffd186`; tools returned `59e0512794648a4ce46c5e90007ebbfabedd4099`; seed returned `15da141534f1d75c4d638940113875b02e2aba00`.
+- [x] Image labels match source. Evidence: web returned revision `23659593fb2448acbe490296c0ece9d981d9e6d8`; tools returned `59e0512794648a4ce46c5e90007ebbfabedd4099`; seed returned `15da141534f1d75c4d638940113875b02e2aba00`.
 
 ## GitOps
 
@@ -48,14 +49,14 @@ Target: `https://libreplay.lan.e-dani.com`
 - [x] MinIO bucket init is explicit. Evidence: `Job/libreplay-minio-init`.
 - [x] Migrate and seed are real Jobs. Evidence: `Job/libreplay-db-migrate-59e0512` and `Job/libreplay-db-seed-15da141`.
 - [x] Job memory limits present. Evidence: all Jobs set memory requests/limits.
-- [x] Server-side manifest dry-run passes. Evidence: `kubectl apply --server-side --force-conflicts --dry-run=server -f k8s/manifest.yaml` exited 0.
-- [blocked] Live Argo sync pending. Blocker: GitOps commit/push and runtime secrets still pending at this checklist revision.
+- [x] Server-side manifest dry-run passes. Evidence: `kubectl apply --dry-run=server -f k8s/manifest.yaml` exited 0; only last-applied annotation warnings on pre-existing resources.
+- [x] Live Argo sync complete. Evidence: GitOps commit `05f3c34 fix: update libreplay LAN web image` pushed; Argo revision `05f3c349a4ed07d4e67e9c31fc2cf01ff7732f22`, sync `Synced`, health `Healthy`.
 
 ## Runtime Secrets
 
-- [ ] `harbor-pull` exists in namespace `libreplay`. Evidence required: `kubectl -n libreplay get secret harbor-pull`.
-- [ ] Vault/ExternalSecret exposes required app keys. Evidence required: key names only from `kubectl -n libreplay get secret libreplay-secrets`.
-- [ ] Generated internal secrets are not printed or committed. Evidence required: command history/log review; no secret values in git.
+- [x] `harbor-pull` exists in namespace `libreplay`. Evidence: namespace pulls private Harbor images successfully; web pod pulled `sha-23659593fb24` and jobs pulled tools/seed images.
+- [x] Vault/ExternalSecret exposes required app keys. Evidence: key names only from `kubectl -n libreplay get secret libreplay-secrets`: `AUTH_SECRET`, `DATABASE_URL`, `DB_PASSWORD`, `DB_USER`, `MEILISEARCH_API_KEY`, `MEILI_MASTER_KEY`, `MINIO_ACCESS_KEY`, `MINIO_BUCKET`, `MINIO_ROOT_PASSWORD`, `MINIO_ROOT_USER`, `MINIO_SECRET_KEY`, `REDIS_URL`, `SEED_USER_PASSWORD`.
+- [x] Generated internal secrets are not printed or committed. Evidence: final verification lists only secret key names; `git status --short` clean in source and GitOps repos.
 
 Required keys: `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`, `MEILISEARCH_API_KEY`, `DB_USER`, `DB_PASSWORD`, `SEED_USER_PASSWORD`.
 
@@ -65,4 +66,12 @@ Required keys: `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, `MINIO_ACCESS_KEY`, `
 - [x] DevOps read-only pass. Evidence: subagent reported blockers: missing `harbor-pull`, incomplete secret contract, job policy failures, no endpoints.
 - [x] QA/Security read-only pass. Evidence: subagent reported blockers: local source not deployed, demo session risk, missing Playwright demo coverage.
 - [x] Backend/frontend implementation pass. Evidence: demo login, health deps, upload proxy, seed and Playwright role projects implemented in commit `986ceec`.
-- [ ] Runtime verification pass. Evidence required: Argo, pods, health, smoke and Playwright LAN outputs.
+- [x] Runtime verification pass. Evidence: Argo/pods/health/demo roles/policy reports/Playwright LAN all passed on 2026-06-19.
+
+## Final Verification Evidence
+
+- [x] Playwright LAN: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWSCREENSHOT=on PWVIDEO=on PWJSON=/tmp/libreplay-playwright-results.json npx playwright test --trace on` -> `73 passed` in `1.6m`, `skipped=0`, `unexpected=0`, `flaky=0`.
+- [x] Artifacts archived locally. Evidence: `apps/web/playwright-report` 88M, `apps/web/test-results` 87M, `/tmp/libreplay-playwright-results.json` 172K.
+- [x] Policy reports clear for P0/P1. Evidence: no critical/high failures in namespaced `policyreport` or `clusterpolicyreport`.
+- [x] Runtime logs checked. Evidence: web logs show Next ready; only non-blocking AWS SDK future Node >=22 warning.
+- [x] Historical warning reconciled. Evidence: events still contain old `libreplay-db-migrate-5dffe73` backoff warning, but current `libreplay-db-migrate-59e0512` is `Complete` and Argo is `Healthy`.
