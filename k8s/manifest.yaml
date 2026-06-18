@@ -412,7 +412,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: libreplay-db-migrate-5dffe73
+  name: libreplay-db-migrate-59e0512
   namespace: libreplay
   annotations:
     argocd.argoproj.io/sync-wave: "2"
@@ -431,7 +431,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: migrate
-          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-5dffe732d3b4@sha256:0eb47ea0363b8a1b704da763f2b0a2f812290882dc20965ca7592ef1975121bb
+          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-59e051279464@sha256:d5183716a46f849f8f1df8676767f2c00a92cd5e29e1d2b1caf8bb51cbd029db
           env:
             - name: DATABASE_URL
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
