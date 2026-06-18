@@ -25,7 +25,7 @@ Target: `https://libreplay.lan.e-dani.com`
 
 ## Source / Build
 
-- [x] LAN demo source committed. Evidence: `/home/dibanez/k8s/libreplay` commit `986ceec feat: enable LAN demo rollout` pushed to `origin/main`.
+- [x] LAN demo source committed. Evidence: `/home/dibanez/k8s/libreplay` commits `986ceec feat: enable LAN demo rollout` and `6b7f750 fix: run LAN seed without corepack cache` pushed to `origin/main`.
 - [x] `pnpm typecheck`. Evidence: exited 0 on 2026-06-19.
 - [x] `pnpm test`. Evidence: exited 0; config 4 tests, security 7 tests, auth no-tests pass, web 5 tests.
 - [x] `pnpm lint`. Evidence: exited 0; one pre-existing Next font warning only.
@@ -34,10 +34,10 @@ Target: `https://libreplay.lan.e-dani.com`
 
 ## Images / Harbor
 
-- [x] Web image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:sha-986ceec2b562@sha256:2c6c3beef8035bb68ef7528e395261f894a61e4e411b073cbee82681a74c3c01`.
-- [x] Migrate tools image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:tools-sha-986ceec2b562@sha256:85f74176ca362c52cd83d20fa979bf41ec876ede63716ed21e0ab948aa0c4384`.
-- [x] Seed image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:seed-sha-986ceec2b562@sha256:e27e49e348fff6d3ab86219d08e2af767214493e139aae1a818c7c9bfd6f1e0d`.
-- [x] Image labels match source. Evidence: `skopeo inspect --no-tags` returned revision `986ceec2b562ee828dbe6f828b0ed459f67c5b78` for all three tags.
+- [x] Web image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:sha-6b7f75034835@sha256:925f4135f8f0a38e45bffc013657f3500408f478e3a98b1f75e0b670d223c935`.
+- [x] Migrate tools image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:tools-sha-6b7f75034835@sha256:111b84a84c0b569cdd979bb890fc95c710e28954cfc5f90e83417febe9723e3e`.
+- [x] Seed image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:seed-sha-6b7f75034835@sha256:a8658b7903a4b1fbbc58dc7937349e2fdf00c0cabba5ee5ca4b5205b72ed0d10`.
+- [x] Image labels match source. Evidence: `skopeo inspect --no-tags` returned revision `6b7f75034835e46f5bc0100b491e6e02ed591922` for all three tags.
 
 ## GitOps
 
@@ -46,7 +46,7 @@ Target: `https://libreplay.lan.e-dani.com`
 - [x] Datastores scale to one replica. Evidence: StatefulSet/Deployments for Postgres, Redis, Meili and MinIO use `replicas: 1`.
 - [x] DB fresh target is `libreplay_lan`. Evidence: Postgres `POSTGRES_DB=libreplay_lan`; `libreplay-db-init` creates DB if existing PVC lacks it.
 - [x] MinIO bucket init is explicit. Evidence: `Job/libreplay-minio-init`.
-- [x] Migrate and seed are real Jobs. Evidence: `Job/libreplay-db-migrate-986ceec` and `Job/libreplay-db-seed-986ceec`.
+- [x] Migrate and seed are real Jobs. Evidence: `Job/libreplay-db-migrate-6b7f750` and `Job/libreplay-db-seed-6b7f750`.
 - [x] Job memory limits present. Evidence: all Jobs set memory requests/limits.
 - [x] Server-side manifest dry-run passes. Evidence: `kubectl apply --server-side --force-conflicts --dry-run=server -f k8s/manifest.yaml` exited 0.
 - [blocked] Live Argo sync pending. Blocker: GitOps commit/push and runtime secrets still pending at this checklist revision.

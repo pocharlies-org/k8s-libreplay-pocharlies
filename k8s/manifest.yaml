@@ -332,7 +332,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-986ceec2b562@sha256:2c6c3beef8035bb68ef7528e395261f894a61e4e411b073cbee82681a74c3c01
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-6b7f75034835@sha256:925f4135f8f0a38e45bffc013657f3500408f478e3a98b1f75e0b670d223c935
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -411,7 +411,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: libreplay-db-migrate-986ceec
+  name: libreplay-db-migrate-6b7f750
   namespace: libreplay
   annotations:
     argocd.argoproj.io/sync-wave: "2"
@@ -430,7 +430,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: migrate
-          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-986ceec2b562@sha256:85f74176ca362c52cd83d20fa979bf41ec876ede63716ed21e0ab948aa0c4384
+          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-6b7f75034835@sha256:111b84a84c0b569cdd979bb890fc95c710e28954cfc5f90e83417febe9723e3e
           env:
             - name: DATABASE_URL
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
@@ -441,7 +441,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: libreplay-db-seed-986ceec
+  name: libreplay-db-seed-6b7f750
   namespace: libreplay
   annotations:
     argocd.argoproj.io/sync-wave: "3"
@@ -460,7 +460,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: seed
-          image: harbor.e-dani.com/homelab/libreplay-web:seed-sha-986ceec2b562@sha256:e27e49e348fff6d3ab86219d08e2af767214493e139aae1a818c7c9bfd6f1e0d
+          image: harbor.e-dani.com/homelab/libreplay-web:seed-sha-6b7f75034835@sha256:a8658b7903a4b1fbbc58dc7937349e2fdf00c0cabba5ee5ca4b5205b72ed0d10
           env:
             - name: DATABASE_URL
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
