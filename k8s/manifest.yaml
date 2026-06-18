@@ -28,6 +28,38 @@ spec:
   dataFrom:
     - extract: { key: secret/libreplay }
 
+# Required keys in Vault `secret/libreplay` before any scale-up:
+# DATABASE_URL, REDIS_URL, AUTH_SECRET, MINIO_ACCESS_KEY, MINIO_SECRET_KEY,
+# MEILISEARCH_API_KEY, DB_USER, DB_PASSWORD, SEED_USER_PASSWORD.
+# Optional provider keys stay empty/absent in staging until real providers are enabled:
+# GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FACEBOOK_CLIENT_ID,
+# FACEBOOK_CLIENT_SECRET, OAUTH_TOKEN_ENC_KEY.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: libreplay-config
+  namespace: libreplay
+data:
+  NODE_ENV: production
+  APP_BASE_URL: https://libreplay.lan.e-dani.com
+  AUTH_URL: https://libreplay.lan.e-dani.com
+  AUTH_TRUST_HOST: "true"
+  DEFAULT_LOCALE: es
+  SUPPORTED_LOCALES: es,en,fr,de,pt
+  RATE_LIMIT_DISABLED: "false"
+  USE_MOCK_OAUTH: "true"
+  ENABLE_MOCK_PAYMENTS: "true"
+  ENABLE_MOCK_AGE_VERIFICATION: "true"
+  ENABLE_MOCK_FACE_LIVENESS: "true"
+  ENABLE_MOCK_CSAM_SCANNER: "true"
+  ENABLE_MOCK_MEDIA_MODERATION: "true"
+  MINIO_ENDPOINT: http://libreplay-minio.libreplay.svc.cluster.local:9000
+  MINIO_BUCKET: libreplay-media
+  MINIO_REGION: us-east-1
+  MINIO_PUBLIC_URL: http://libreplay-minio.libreplay.svc.cluster.local:9000
+  MEILISEARCH_HOST: http://libreplay-meilisearch.libreplay.svc.cluster.local:7700
+
 # ── PostgreSQL ────────────────────────────────────────────────────────────────
 ---
 apiVersion: v1
@@ -153,7 +185,7 @@ spec:
           ports: [{ name: http, containerPort: 7700 }]
           env:
             - name: MEILI_MASTER_KEY
-              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MEILI_MASTER_KEY } }
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MEILISEARCH_API_KEY } }
           volumeMounts:
             - { name: data, mountPath: /meili_data }
           resources:
@@ -208,9 +240,9 @@ spec:
             - { name: console, containerPort: 9001 }
           env:
             - name: MINIO_ROOT_USER
-              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_ROOT_USER } }
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_ACCESS_KEY } }
             - name: MINIO_ROOT_PASSWORD
-              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_ROOT_PASSWORD } }
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_SECRET_KEY } }
           volumeMounts:
             - { name: data, mountPath: /data }
           resources:
@@ -240,6 +272,8 @@ kind: Deployment
 metadata:
   name: libreplay-web
   namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-options: Replace=true
 spec:
   replicas: 0   # scale to 1 after Phase 9 stores seeded
   selector: { matchLabels: { app: libreplay-web } }
@@ -247,23 +281,98 @@ spec:
     metadata: { labels: { app: libreplay-web } }
     spec:
       enableServiceLinks: false
+      imagePullSecrets:
+        - name: harbor-pull
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:latest
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-c275fb3@sha256:541f9b468f72cc81c5cc93cc0821ee9630a20052cc2e7d08b0a11c8872ff3c9b
           ports: [{ name: http, containerPort: 3000 }]
+          envFrom:
+            - configMapRef: { name: libreplay-config }
           env:
-            - { name: DATABASE_URL, value: "postgresql://$(DB_USER):$(DB_PASSWORD)@libreplay-postgres.libreplay.svc.cluster.local:5432/libreplay" }
-            - { name: REDIS_URL, value: "redis://libreplay-redis.libreplay.svc.cluster.local:6379" }
-            - { name: MEILISEARCH_URL, value: "http://libreplay-meilisearch.libreplay.svc.cluster.local:7700" }
-            - { name: MINIO_ENDPOINT, value: "libreplay-minio.libreplay.svc.cluster.local:9000" }
-          envFrom: [{ secretRef: { name: libreplay-secrets } }]
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
+            - name: REDIS_URL
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: REDIS_URL } }
+            - name: AUTH_SECRET
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: AUTH_SECRET } }
+            - name: MINIO_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_ACCESS_KEY } }
+            - name: MINIO_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_SECRET_KEY } }
+            - name: MEILISEARCH_API_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MEILISEARCH_API_KEY } }
+            - name: GOOGLE_CLIENT_ID
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: GOOGLE_CLIENT_ID, optional: true } }
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: GOOGLE_CLIENT_SECRET, optional: true } }
+            - name: FACEBOOK_CLIENT_ID
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: FACEBOOK_CLIENT_ID, optional: true } }
+            - name: FACEBOOK_CLIENT_SECRET
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: FACEBOOK_CLIENT_SECRET, optional: true } }
+            - name: OAUTH_TOKEN_ENC_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: OAUTH_TOKEN_ENC_KEY, optional: true } }
           resources:
             requests: { cpu: 100m, memory: 256Mi }
             limits:   { memory: 1Gi }
           readinessProbe:
             httpGet: { path: /api/health, port: 3000 }
             initialDelaySeconds: 20
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: libreplay-db-migrate
+  namespace: libreplay
+  annotations:
+    libreplay.e-dani.com/manual-gate: "suspended; requires backup, secrets and approval before unsuspend"
+spec:
+  suspend: true
+  backoffLimit: 0
+  template:
+    metadata:
+      labels: { app: libreplay-db-migrate }
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: harbor-pull
+      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      containers:
+        - name: migrate
+          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-c275fb3@sha256:27a897c20e184f276ef701512083d464fb4731af0243816bf9995583e8749630
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: libreplay-db-seed
+  namespace: libreplay
+  annotations:
+    libreplay.e-dani.com/manual-gate: "blocked; seed image/runbook and data approval required"
+spec:
+  suspend: true
+  backoffLimit: 0
+  template:
+    metadata:
+      labels: { app: libreplay-db-seed }
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: harbor-pull
+      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      containers:
+        - name: seed
+          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-c275fb3@sha256:27a897c20e184f276ef701512083d464fb4731af0243816bf9995583e8749630
+          command: [sh, -lc]
+          args:
+            - |
+              echo "Seed job blocked: seed-capable image and approved seed runbook required." >&2
+              exit 1
 ---
 apiVersion: v1
 kind: Service
