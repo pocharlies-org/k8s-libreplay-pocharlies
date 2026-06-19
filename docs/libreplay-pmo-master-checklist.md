@@ -1,7 +1,7 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-READY`
-Last updated: 2026-06-19 13:00 Europe/Madrid
+Last updated: 2026-06-19 13:02 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 ## Directives
@@ -11,7 +11,7 @@ Target: `https://libreplay.lan.e-dani.com`
 - [x] Sin passwords para usuarios/QA. Evidence: source commit `986ceec2b562...` uses `/api/auth/demo-login`; Playwright no longer references `SEED_AI_USER_PASSWORD` or `E2E_TEST_PASSWORD`.
 - [x] Secrets internos siguen en secrets. Evidence: manifest reads `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, MinIO, Meili and `SEED_USER_PASSWORD` from `libreplay-secrets`.
 - [x] Mocks visibles como LAN/no-prod. Evidence: ConfigMap enables mock flags; UI has demo/no-prod panel and creator/payment mock copy.
-- [x] LAN demo cannot be mistaken for production mode. Evidence: GitOps ConfigMap declares `DEPLOYMENT_MODE=lan-demo`; source env parser rejects `ENABLE_LAN_DEMO_LOGIN` outside `lan-demo` and rejects all critical mocks in `DEPLOYMENT_MODE=production`.
+- [x] LAN demo cannot be mistaken for production mode. Evidence: GitOps ConfigMap declares `DEPLOYMENT_MODE=lan-demo`; source env parser rejects `ENABLE_LAN_DEMO_LOGIN` outside `lan-demo` and rejects all critical mocks in `DEPLOYMENT_MODE=production`; web pod template carries config rollout annotation `deployment-mode-lan-demo-20260619-1302` so pods reload ConfigMap env.
 - [x] No cerrar con pods caidos, 404s, buttons mudos, skips criticos or missing secrets. Evidence: Argo `Synced/Healthy`, pods/endpoints ready, `libreplay-secrets` key contract present, Playwright LAN `73 passed`, `skipped=0`, `unexpected=0`, `flaky=0`.
 
 ## Acceptance Criteria

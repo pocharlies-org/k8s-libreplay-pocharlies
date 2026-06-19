@@ -326,7 +326,10 @@ spec:
   revisionHistoryLimit: 1
   selector: { matchLabels: { app: libreplay-web } }
   template:
-    metadata: { labels: { app: libreplay-web } }
+    metadata:
+      labels: { app: libreplay-web }
+      annotations:
+        libreplay.e-dani.com/config-rollout: deployment-mode-lan-demo-20260619-1302
     spec:
       enableServiceLinks: false
       imagePullSecrets:
