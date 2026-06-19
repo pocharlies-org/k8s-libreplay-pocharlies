@@ -329,7 +329,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: release-workflow-20260619-1618
+        libreplay.e-dani.com/config-rollout: media-worker-20260619-1644
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -337,7 +337,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-b3ebad4ac482@sha256:d7eeb53810159c9bc7fc3ed5355eac4d094ba1e7b213932b72ef3601d85df26c
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-1d86d1d37e2a@sha256:0da74798859d5c8c27261885adfb648ebf6ed88d671ee1de5bef05cfd76255ab
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -370,6 +370,51 @@ spec:
           readinessProbe:
             httpGet: { path: /api/health, port: 3000 }
             initialDelaySeconds: 20
+
+# ── LibrePlay worker (BullMQ media processing) ────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: libreplay-worker
+  namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector: { matchLabels: { app: libreplay-worker } }
+  template:
+    metadata:
+      labels: { app: libreplay-worker }
+      annotations:
+        libreplay.e-dani.com/config-rollout: media-worker-20260619-1644
+    spec:
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: harbor-pull
+      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      containers:
+        - name: libreplay-worker
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-1d86d1d37e2a@sha256:4a156bdd8b6851a0d5028a62c886b452f61bc67655a851991086bdae8091fbe5
+          envFrom:
+            - configMapRef: { name: libreplay-config }
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
+            - name: REDIS_URL
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: REDIS_URL } }
+            - name: AUTH_SECRET
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: AUTH_SECRET } }
+            - name: MINIO_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_ACCESS_KEY } }
+            - name: MINIO_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_SECRET_KEY } }
+            - name: MEILISEARCH_API_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MEILISEARCH_API_KEY } }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits:   { memory: 512Mi }
 ---
 apiVersion: batch/v1
 kind: Job
