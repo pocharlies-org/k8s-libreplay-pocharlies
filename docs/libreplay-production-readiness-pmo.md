@@ -1,14 +1,14 @@
 # LibrePlay Production Readiness PMO
 
 Status: `NOT-PRODUCTION-READY`
-Last updated: 2026-06-19 15:15 Europe/Madrid
+Last updated: 2026-06-19 16:10 Europe/Madrid
 Target today: `https://libreplay.lan.e-dani.com`
 
 ## Executive Position
 
-LibrePlay is a working LAN demo, not a production-ready social network.
+LibrePlay is a validated LAN demo, not a production-ready social network.
 
-PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The app has meaningful product surface, auth scaffolding, media storage scaffolding, moderation data models and LAN GitOps. It does not yet have production payments, real identity/age verification, real CSAM/media moderation, scalable media processing, complete mobile validation, production observability, DR rehearsal, legal/compliance sign-off, or a clean security dependency baseline.
+PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness and critical dependency baseline are now fixed, but the app still lacks production payments, real identity/age verification, real CSAM/media moderation, scalable media processing, complete mobile validation, production observability, DR rehearsal and legal/compliance sign-off.
 
 ## RHO Task Checklist
 
@@ -21,13 +21,13 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ### Current Acceptance Evidence
 
-- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main...origin/main`, head `61c6dff feat(config): add deployment mode guardrails`.
-- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod...origin/deploy/prod`, head `3e5c702 deploy: promote libreplay guardrail image`.
-- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy`, revision `3e5c70241899af7c587570c439c285d029cc65db`; pod image `sha-61c6dffb1b0c@sha256:46a00da87e50fb0dae9f77d4b5e458902e1e422eab82f7a732b91bd4380bfb43`.
+- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `b3ebad4 fix: reset demo users in lan e2e setup`.
+- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`, head `eb96c48 fix: deploy libreplay demo reset image`.
+- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy`, revision `eb96c4880dd495ea265962623239f36723be8122`; pod image `sha-b3ebad4ac482@sha256:a22212a195bb5e88d1e3f62c9a8b2a60ffb8c2dc2f0068fe36b75d0008996ba1`.
 - [x] LAN demo guardrail is active. Evidence: pod env has `DEPLOYMENT_MODE=lan-demo`, `NODE_ENV=production`, `ENABLE_LAN_DEMO_LOGIN=true`, `ENABLE_MOCK_PAYMENTS=true`, `ENABLE_MOCK_LLM=true`.
-- [x] Mobile smoke exists and passes. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 pnpm --filter @libreplay/web exec playwright test --project=mobile --reporter=list` -> `3 passed`.
-- [blocked] Full LAN E2E is not green. Evidence: full suite on 2026-06-19 returned `46 passed`, `27 failed`; 25 failures are `demo-login HTTP 429`, 2 failures are stateful data exhaustion (`Discover` empty and `/new` no `Añadir amigo` candidate).
-- [blocked] Production security dependency baseline is not clean. Evidence: `pnpm audit --prod` found `30 vulnerabilities`, including `2 critical`, `7 high`, mostly from `next@15.0.3`.
+- [x] Mobile smoke exists and passes. Evidence: full Playwright run includes mobile project tests `71-73` passing.
+- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-b3ebad4.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `73 passed (1.3m)`.
+- [x] Production security dependency baseline is clean for known npm advisories. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found` after upgrading Next to `15.5.19`, `next-intl` to `4.13.0` and adding transitives overrides.
 
 ## Specialist Assessment
 
@@ -85,8 +85,8 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 ### Security
 
 - [x] Basic security headers exist. Evidence: HTTP response includes `permissions-policy`, `referrer-policy`, `x-content-type-options`, `x-frame-options`.
-- [blocked] Dependency security is not acceptable. Evidence: `pnpm audit --prod` found critical/high Next.js advisories against `next@15.0.3`.
-- [blocked] Rate limiting is not production-grade. Evidence: in-process limiter documented as prototype-only; full LAN E2E hit `demo-login` 429 after repeated suite logins.
+- [x] Dependency security baseline is clean for known npm advisories. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found`.
+- [blocked] Rate limiting is not production-grade. Evidence: in-process limiter documented as prototype-only; LAN-only rate allowances were added for validation, but production still needs Redis/distributed enforcement.
 - [ ] BOLA/IDOR security review is complete. Missing: systematic tests for media, albums, conversations, reports, admin actions and creator purchases.
 - [ ] Secrets/compliance posture is complete. Missing: production OAuth/payment secrets, secret rotation, least privilege S3 credentials, signed URL policy, audit of optional secret behavior.
 
@@ -94,10 +94,10 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ### P0 - Make Validation Trustworthy
 
-- [ ] Fix LAN E2E harness to be idempotent and not rate-limit itself.
-  Evidence required: full LAN E2E passes from a dirty/persistent LAN dataset, or reseed/reset is part of the test command.
-- [ ] Patch Next.js security baseline.
-  Evidence required: `pnpm audit --prod` has no critical/high findings; `pnpm test`, `pnpm typecheck`, web build, source CI and GitOps rollout pass.
+- [x] Fix LAN E2E harness to be idempotent and not rate-limit itself.
+  Evidence: full LAN E2E passes from persistent LAN data; `/api/auth/demo-reset` restores demo users/relationships and LAN-only rate allowances prevent QA self-throttling.
+- [x] Patch Next.js security baseline.
+  Evidence: `pnpm audit --prod` has no known vulnerabilities; `pnpm test`, `pnpm typecheck`, web build, source CI `27830389764`, GitOps CI `27830499649` and Argo rollout pass.
 - [ ] Deploy media worker separately from web.
   Evidence required: BullMQ worker Deployment running; `/api/media/complete` does not rely on inline fallback in production/staging.
 
@@ -146,18 +146,19 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ## Recommended Next Technical Meta
 
-`PROD-0-QA-SECURITY-GATE`
+`PROD-1-RELEASE-AND-MEDIA-FOUNDATION`
 
-Objective: make the project auditable again before adding Stripe/OAuth/media providers.
+Objective: remove the next production blockers after the validation harness: release automation and scalable media foundations.
 
 Success criteria:
 
-- [ ] Full LAN E2E can run repeatably without 429 or seed exhaustion.
-- [ ] The two real stateful failures are fixed or the seed/test isolation makes them deterministic.
-- [ ] Next.js is upgraded to a patched version and `pnpm audit --prod` has no critical/high findings.
-- [ ] CI and GitOps deployment remain green.
+- [ ] `Release Image` workflow can publish web/tools/seed without manual Harbor push.
+- [ ] `/api/media/upload/[id]` streams to S3 instead of buffering whole files in web memory.
+- [ ] `/api/media/complete` validates object existence before enqueue/complete.
+- [ ] A `libreplay-worker` Deployment runs BullMQ media jobs; production/staging no longer depend on inline fallback.
+- [ ] CI, GitOps deployment and full LAN E2E remain green.
 
-Rationale: integrating Google/Facebook/PSP/media providers on top of a failing validation harness and critical dependency baseline would produce expensive uncertainty.
+Rationale: the app is now auditable, but production operation is still blocked by manual image release and a media path that can OOM web pods and cannot generate durable variants/transcodes.
 
 ## External Policy Notes
 
