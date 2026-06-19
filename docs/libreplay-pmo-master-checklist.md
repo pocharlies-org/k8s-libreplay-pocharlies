@@ -1,7 +1,7 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-19 21:15 Europe/Madrid
+Last updated: 2026-06-19 21:32 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
@@ -18,7 +18,7 @@ Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readine
 - [x] Official release digests were published. Evidence: Release Image run `27844447288` completed `success`; web digest `sha256:b1c2ab433f9aa85d895b48e770809876d8efda6d54264ac61f75f0e073ee3529`; worker digest `sha256:a329d595cbaf608b183ea2deea7e187c6d7ef5c5f0b8d2809b389fd60d75354b`; tools digest `sha256:dc07aceea8e121e7d54c8a955e7e51e1cec2e1f7a8725f7a17b725ddbe5c6074`; seed digest `sha256:44e1d9a23788b626c29a903ed83bf22164840c04eb88c3031f2e5f79625c019b`.
 - [x] Staging auth runbook and contract check exist. Evidence: [libreplay-staging-auth-runbook.md](./libreplay-staging-auth-runbook.md) and `scripts/check-libreplay-staging-contract.sh`; `sh -n scripts/check-libreplay-staging-contract.sh` and `git diff --check` passed.
 - [x] Specialist PMO passes completed. Evidence: Wegener Security/Auth reported `BLOCKED` until real secrets/staging app exist; Kepler Architect/DevOps reported no live `libreplay-staging` app/namespace/ExternalSecret and recommended Argo app + Kustomize overlay + per-env Vault path; Galileo PO/QA reported current E2E lacks real callback/inbox/linking smokes and prioritized gated staging smokes/runbook.
-- [blocked] GitOps deploy/runtime evidence is pending. Evidence: source CI/release are green and GitOps manifest now points web/worker at `31b26c3` digests; GitOps CI, Argo sync, health and LAN E2E must still be recorded before this runtime gate is closed.
+- [x] GitOps deploy/runtime evidence is complete. Evidence: GitOps commit `1b8ff18 feat: deploy libreplay staging auth gates`; GitOps CI run `27844721752` completed `success`; server-side dry-run passed; Argo is `Synced/Healthy` at `1b8ff18e7e29752982c6e7e20c6bf719005a58b0`; web and worker rollouts completed on `31b26c3` digests; `/api/health/deps=200` with queues all `0`; full LAN E2E returned `79 passed (1.3m)`; recent worker log grep for token/action URL/error patterns returned no matches.
 - [blocked] Full real-provider staging remains blocked. Evidence: no live `libreplay-staging` Argo app/namespace/ExternalSecret exists, and current runtime secret key names still lack Google/Facebook/OAuth encryption/SMTP provider keys.
 
 ## 2026-06-19 PMO Iteration - Auth Email Queue And Staging Guardrails Gate

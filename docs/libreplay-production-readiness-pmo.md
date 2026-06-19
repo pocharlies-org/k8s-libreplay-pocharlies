@@ -1,7 +1,7 @@
 # LibrePlay Production Readiness PMO
 
 Status: `NOT-PRODUCTION-READY`
-Last updated: 2026-06-19 21:15 Europe/Madrid
+Last updated: 2026-06-19 21:32 Europe/Madrid
 Target today: `https://libreplay.lan.e-dani.com`
 
 ## Executive Position
@@ -22,8 +22,8 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 ### Current Acceptance Evidence
 
 - [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `53a8b48 fix(auth): redact console email action urls`.
-- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; auth-email queue/redaction manifest commit `6ca7ede` is pushed.
-- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy` at `6ca7ede05399458c3ba42da9439e638ee0ba52aa`; runtime web image `sha-53a8b4845725@sha256:05ad264d771d1375949583ce4af2383133fe07ad4eb246706c343347d2fc6abe`, worker image `worker-sha-53a8b4845725@sha256:f28dea3a5d6c5c367f4aa01ea3e7809e1d65376811b6e1b419708223330045c7`.
+- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; staging-auth-gates manifest commit `1b8ff18` is pushed.
+- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy` at `1b8ff18e7e29752982c6e7e20c6bf719005a58b0`; runtime web image `sha-31b26c35eee0@sha256:b1c2ab433f9aa85d895b48e770809876d8efda6d54264ac61f75f0e073ee3529`, worker image `worker-sha-31b26c35eee0@sha256:a329d595cbaf608b183ea2deea7e187c6d7ef5c5f0b8d2809b389fd60d75354b`.
 - [x] LAN demo guardrail is active. Evidence: pod env has `DEPLOYMENT_MODE=lan-demo`, `NODE_ENV=production`, `ENABLE_LAN_DEMO_LOGIN=true`, `ENABLE_MOCK_PAYMENTS=true`, `ENABLE_MOCK_LLM=true`.
 - [x] Mobile smoke exists and passes. Evidence: full Playwright run includes mobile project tests `77-79` passing.
 - [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 npx playwright test --reporter=line` from `apps/web` -> `79 passed (1.3m)`.
@@ -94,7 +94,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Release automation remains complete for auth email recovery. Evidence: source CI run `27837492921` completed `success`; Release Image run `27837784400` completed `success`; GitOps commit `da4868b` deploys web/worker/tools digests for source `1bbe568`; GitOps CI run `27838078792` completed `success`; migration job `libreplay-db-migrate-1bbe568` completed; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for OAuth/CSRF hardening. Evidence: source CI run `27839801643` completed `success`; Release Image run `27840087320` completed `success`; GitOps commit `a3a6567` deploys web/worker/tools digests for source `c37cdca`; GitOps CI run `27840418461` completed `success`; migration job `libreplay-db-migrate-c37cdca` completed; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for auth email queue/redaction. Evidence: source CI run `27842739635` completed `success`; Release Image run `27843010658` completed `success`; GitOps commit `6ca7ede` deploys web/worker digests for source `53a8b48`; GitOps CI run `27843274783` completed `success`; Argo is `Synced/Healthy`.
-- [blocked] Deploy evidence for staging auth gate source is pending. Evidence: source CI run `27844167141` and Release Image run `27844447288` completed `success`; GitOps deploy/Argo/LAN E2E evidence for source `31b26c3` is still pending.
+- [x] Release/deploy evidence is complete for staging auth gate source. Evidence: source CI run `27844167141` and Release Image run `27844447288` completed `success`; GitOps commit `1b8ff18` deploys web/worker digests for source `31b26c3`; GitOps CI run `27844721752` completed `success`; Argo is `Synced/Healthy`; full LAN E2E is `79 passed`; `/api/health/deps` is healthy with authEmail/mediaModeration queues all `0`.
 - [blocked] Production scale/HA is missing. Evidence: GitOps now has web plus worker, but still runs single replicas for web, worker, Postgres, Redis, Meili and MinIO; no HPA, PDB, NetworkPolicy, backup CronJobs or restore rehearsal.
 - [ ] Observability is production-grade. Missing: metrics, dashboards, structured logs, error tracking, alerting, SLOs, synthetic checks.
 - [ ] Disaster recovery is rehearsed. Missing: backup jobs, restore runbook, RPO/RTO targets, tested restore for Postgres/MinIO/Meili/Redis.
