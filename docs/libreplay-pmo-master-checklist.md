@@ -1,11 +1,27 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-19 17:25 Europe/Madrid
+Last updated: 2026-06-19 18:13 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
-Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation and image variants are now green, but production is still blocked by real-provider, video transcoding, payments, DevOps/DR, compliance and observability gaps.
+Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants and video probe/thumbnail groundwork are now green, but production is still blocked by real-provider identity, production video renditions/HLS, payments, DevOps/DR, compliance and observability gaps.
+
+## 2026-06-19 PMO Iteration - Video Groundwork Gate
+
+- [x] Source video groundwork patch committed and pushed. Evidence: source commits `a55c0f6 feat(media): add video probe thumbnails` and `e9a1135 fix(media): bound video processing failures`.
+- [x] Source validation passed. Evidence: `pnpm --filter @libreplay/media test` -> `7 passed`; `pnpm --filter @libreplay/jobs test` -> `5 passed`; focused media/jobs typechecks passed; source CI run `27835662179` completed `success`.
+- [x] Official release digests were published. Evidence: Release Image run `27836030980` completed `success` for head `e9a11353e9bc51637405a8160b02f000effbf408`; web digest `sha256:45a5e0a804618f780e38e29800aea921bee46f8845154778a46b508db1f4159f`; worker digest `sha256:10b3bfca297d954590dcce9dc8f6d37195335c28815340cd28c9bf6733209da5`; tools digest `sha256:dd14ec3ac07e18a424e324eae8654a363c0fc737d05e543a04e7b72d5529383b`; seed digest `sha256:9744acc106a9ed34147a158533bedf265b902e76648b748882edf5315f995d90`.
+- [x] GitOps deploys web and worker by digest. Evidence: GitOps commit `e576d68 feat: deploy libreplay video groundwork`; GitOps CI run `27836441318` completed `success`; `kubectl apply --dry-run=server -f k8s/manifest.yaml` passed.
+- [x] Runtime is on the expected revision. Evidence: Argo `Synced/Healthy` at `e576d68442ed5438fc1347d24045ae7a33f9ce50`; `libreplay-web` uses `sha-e9a11353e9bc@sha256:45a5e0a804618f780e38e29800aea921bee46f8845154778a46b508db1f4159f`; `libreplay-worker` uses `worker-sha-e9a11353e9bc@sha256:10b3bfca297d954590dcce9dc8f6d37195335c28815340cd28c9bf6733209da5`; both rollouts completed.
+- [x] Worker runtime can process video. Evidence: `kubectl -n libreplay exec deploy/libreplay-worker -- ffmpeg -version` -> `ffmpeg version 5.1.9-0+deb12u1`; `ffprobe -version` -> `ffprobe version 5.1.9-0+deb12u1`.
+- [x] Video uploads are probed and thumbnail variant is generated. Evidence: focused LAN Playwright `e2e/33-payments-media.auth.spec.ts` -> `5 passed`, including `video upload is probed and produces a thumbnail variant`.
+- [x] Video metadata and thumbnail row exist in DB. Evidence: `MediaAsset` `cmql4l8dw000d31zblcy4a08a` is `VIDEO`, `video/mp4`, `APPROVED`, `durationSeconds=1`, `width=16`, `height=16`; `MediaVariant` has `THUMB_LARGE`, `image/jpeg`, `variants/cmql4l8dw000d31zblcy4a08a/video_thumbnail.jpg`, `sizeBytes=222`, `width=16`, `height=16`.
+- [x] Video original and thumbnail exist in S3-compatible storage. Evidence: temporary `minio/mc` pod `mc stat --json` found original `video/cmqk3dkr800006gyso70h639f/1781885449651-lan-demo-video.mp4` with `Content-Type=video/mp4`, size `2210`; thumbnail `variants/cmql4l8dw000d31zblcy4a08a/video_thumbnail.jpg` with `Content-Type=image/jpeg`, size `222`.
+- [x] Queues and worker are healthy after video processing. Evidence: worker logs show `media-moderation completed 11` and `12`; Redis `bull:media-moderation` wait/active/delayed/failed all `0`.
+- [x] LAN E2E remains green with mobile smoke. Evidence: full LAN Playwright `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-video-full.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `76 passed (1.3m)`, including mobile tests `74-76`.
+- [x] Independent DevOps/release verifier pass completed. Evidence: Volta reported PASS for GitOps CI `27836441318`, Argo `Synced/Healthy`, expected e9a1135 digests, ffmpeg/ffprobe runtime and no failed pods/jobs.
+- [blocked] Production readiness remains blocked. Evidence: this gate adds probe/thumbnail/max-duration groundwork, but production video renditions/HLS, real CSAM/media moderation providers, HA/backups/observability, real OAuth/email and production payments remain open.
 
 ## 2026-06-19 PMO Iteration - Image Variants Gate
 
@@ -69,7 +85,7 @@ Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readine
 - [x] Secrets internos siguen en secrets. Evidence: manifest reads `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, MinIO, Meili and `SEED_USER_PASSWORD` from `libreplay-secrets`.
 - [x] Mocks visibles como LAN/no-prod. Evidence: ConfigMap enables mock flags; UI has demo/no-prod panel and creator/payment mock copy.
 - [x] LAN demo cannot be mistaken for production mode. Evidence: GitOps ConfigMap declares `DEPLOYMENT_MODE=lan-demo`; source env parser rejects `ENABLE_LAN_DEMO_LOGIN` outside `lan-demo` and rejects all critical mocks in `DEPLOYMENT_MODE=production`; web pod template carries config rollout annotation `deployment-mode-lan-demo-20260619-1302` so pods reload ConfigMap env.
-- [x] No cerrar con pods caidos, 404s, buttons mudos, skips criticos or missing secrets in LAN validation. Evidence: current full LAN Playwright is `74 passed`, Argo is `Synced/Healthy`, web and worker pods are `1/1`, and reset/rate-limit issues are fixed for `DEPLOYMENT_MODE=lan-demo`.
+- [x] No cerrar con pods caidos, 404s, buttons mudos, skips criticos or missing secrets in LAN validation. Evidence: current full LAN Playwright is `76 passed`, Argo is `Synced/Healthy`, web and worker pods are `1/1`, and reset/rate-limit issues are fixed for `DEPLOYMENT_MODE=lan-demo`.
 
 ## Acceptance Criteria
 
