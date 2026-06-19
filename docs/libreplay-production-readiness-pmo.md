@@ -1,14 +1,14 @@
 # LibrePlay Production Readiness PMO
 
 Status: `NOT-PRODUCTION-READY`
-Last updated: 2026-06-20 00:07 Europe/Madrid
+Last updated: 2026-06-20 00:45 Europe/Madrid
 Target today: `https://libreplay.lan.e-dani.com`
 
 ## Executive Position
 
 LibrePlay is a validated LAN demo, not a production-ready social network.
 
-PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork, video MP4/HLS rendition MVP, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated real-provider Playwright smoke, staging auth runbook, static staging secret contract, pending social-email completion, authenticated mobile core coverage and the mobile Discover responsive fix are now fixed, but the app still lacks real OAuth provider runtime/secrets, production payments, real identity/age verification providers, real CSAM/media moderation, real SMTP provider delivery in staging/prod, full production media delivery/lifecycle/CDN controls, full mobile product matrix validation, production observability, DR rehearsal and legal/compliance sign-off.
+PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork, video MP4/HLS rendition MVP, payment fail-closed/provider selection, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated real-provider Playwright smoke, staging auth runbook, static staging secret contract, pending social-email completion, authenticated mobile core coverage and the mobile Discover responsive fix are now fixed, but the app still lacks real OAuth provider runtime/secrets, production payments through an approved adult-friendly PSP, real identity/age verification providers, real CSAM/media moderation, real SMTP provider delivery in staging/prod, full production media delivery/lifecycle/CDN controls, full mobile product matrix validation, production observability, DR rehearsal and legal/compliance sign-off.
 
 ## RHO Task Checklist
 
@@ -21,12 +21,12 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ### Current Acceptance Evidence
 
-- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `2a04229 feat(media): add video renditions`.
-- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; current runtime manifest commit `32ad2dc fix: keep libreplay migration job history` is pushed.
-- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy` at `32ad2dc30f9a99d72aaadeca6c2b3e70be85d6f7`; runtime web image `sha-2a042298f46f@sha256:db7e0ed3db32a2fc8b865698b47318be4315c0c36c8e9042e8e0355c2145f149`, worker image `worker-sha-2a042298f46f@sha256:26e07b1b51b5781753dcfffef675bfba95ca09613402b649bfb78dc2184eb077`.
-- [x] LAN demo guardrail is active. Evidence: pod env has `DEPLOYMENT_MODE=lan-demo`, `NODE_ENV=production`, `ENABLE_LAN_DEMO_LOGIN=true`, `ENABLE_MOCK_PAYMENTS=true`, `ENABLE_MOCK_LLM=true`.
+- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `d2438a0 fix(payments): fail closed mock provider`.
+- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; current runtime manifest commit `a8dbe19 fix: deploy libreplay payment fail closed` is pushed.
+- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy` at `a8dbe190e6396f03efc3bcd00f8c6dff25dbaa8d`; runtime web image `sha-d2438a0ff2cb@sha256:f11312ad087fe409ca14e26fc7029f25e177c951db18d8d619cb9047f5a83f13`, worker image `worker-sha-d2438a0ff2cb@sha256:aa0284ebe199dde396c0a13da03268b32aaa127341b29b0a62000888696e5730`.
+- [x] LAN demo guardrail is active. Evidence: pod env has `DEPLOYMENT_MODE=lan-demo`, `NODE_ENV=production`, `ENABLE_LAN_DEMO_LOGIN=true`, `PAYMENT_PROVIDER=mock`, `ENABLE_MOCK_PAYMENTS=true`, `ENABLE_MOCK_LLM=true`.
 - [x] Authenticated mobile core coverage exists and passes. Evidence: mobile Playwright project has `11 tests in 2 files`; final LAN mobile run returned `11 passed (10.0s)`, covering auth layout, OAuth buttons, forgot/reset/verify/social-email, bottom nav, feed publish/report, Discover filters/message, messages send, settings/security and map.
-- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 pnpm --filter @libreplay/web exec playwright test --reporter=line` -> `90 passed (1.5m)`.
+- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 pnpm --filter @libreplay/web exec playwright test --reporter=line` -> `90 passed (1.4m)`.
 - [x] Production security dependency baseline is clean for known npm advisories. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found` after upgrading Next to `15.5.19`, `next-intl` to `4.13.0` and adding transitives overrides.
 - [x] Auth email queue is deployed and drains. Evidence: `/api/health/deps` reports `authEmail` waiting/active/delayed/failed all `0`; worker logs show `[auth-email:password_reset] queued console delivery to=demo-member@libreplay.local` and `auth-email completed 2 password_reset` with no URL or token.
 - [x] Staging can no longer pass with mock OAuth enabled at app-config level. Evidence: source commit `31b26c3`; `DEPLOYMENT_MODE=staging` requires `USE_MOCK_OAUTH=false`, Google/Facebook secrets and `OAUTH_TOKEN_ENC_KEY`.
@@ -34,6 +34,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Pending OAuth email flow no longer dead-ends. Evidence: `/[locale]/auth/social-email` and `POST /api/auth/social-email` exist; pending social cookie is AES-GCM sealed, token-free and TTL-bound; manual email completion queues verification email and full LAN E2E is green.
 - [x] Mobile Discover responsive bug is fixed. Evidence: first LAN mobile run on authenticated mobile coverage found the filters panel pushed `Mensaje` outside the iPhone viewport; source `8d64302` stacks Discover filters on mobile and final LAN mobile/full E2E passed.
 - [x] Video MP4/HLS rendition MVP is deployed and validated. Evidence: source commit `2a04229`, migration `20260619212500_video_renditions`, Release Image run `27849982311`, GitOps commits `6437736` and `32ad2dc`, focused LAN media E2E `5 passed (7.2s)`, latest DB video asset `cmqlh6b4m000d4ozyuwcxz4ry` has `THUMB_LARGE`, `VIDEO_MP4_480P` and `VIDEO_HLS_480P`, and full LAN E2E returned `90 passed (1.5m)`.
+- [x] Payment fail-closed/provider selection is deployed and validated. Evidence: source commit `d2438a0`, source CI run `27851079378`, Release Image run `27851301076`, GitOps commit `a8dbe19`, GitOps CI run `27851552472`, runtime env `PAYMENT_PROVIDER=mock` only under `DEPLOYMENT_MODE=lan-demo`, staging contract `PAYMENT_PROVIDER=disabled` with `ENABLE_MOCK_PAYMENTS=false`, webhook placeholder returns `503 PAYMENT_PROVIDER_NOT_CONFIGURED`, focused payment/media E2E returned `5 passed (7.5s)`, and full LAN E2E returned `90 passed (1.4m)`.
 
 ## Specialist Assessment
 
@@ -71,8 +72,9 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 ### Payments / Monetization
 
 - [blocked] Stripe is not a safe default assumption for this product. Evidence: official Stripe restricted-business docs list adult services, pay-per-view adult features, adult live chat and mature audience sexual content as restricted/prohibited; Stripe may require explicit approval or may not support the business.
-- [x] Payment domain scaffolding exists. Evidence: `Purchase`, `CreatorSubscription`, `PaidContentPurchase`, `CreatorMembership`, provider interface and mock payment provider.
-- [blocked] Real payments are not integrated. Evidence: no `stripe` package, no `STRIPE_*` envs, routes are `/mock`, provider is `mockPaymentProvider`.
+- [x] Payment domain scaffolding exists. Evidence: `Purchase`, `CreatorSubscription`, `PaidContentPurchase`, `CreatorMembership`, provider interface, mock payment provider and env-selected payment provider facade.
+- [x] Mock payments fail closed outside LAN/test. Evidence: `PAYMENT_PROVIDER` defaults to `disabled`; staging/prod reject `PAYMENT_PROVIDER=mock` or `ENABLE_MOCK_PAYMENTS=true`; six mock purchase routes return `503 PAYMENT_PROVIDER_NOT_CONFIGURED` before session/DB work when disabled; webhook placeholder returns `503` until a real PSP exists.
+- [blocked] Real payments are not integrated. Evidence: no approved PSP package/env exists; no signed webhook verification, idempotency, refunds, disputes, subscription lifecycle, ledger, tax/VAT or creator payout/KYC flow is implemented.
 - [ ] Adult-friendly PSP decision exists. Missing: compliance-approved PSP, marketplace/payout/KYC model, webhook idempotency, chargeback/refund/negative-balance handling, tax/VAT handling.
 
 ### Media / S3 / Compression
@@ -100,6 +102,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Release automation remains complete for image variants. Evidence: source `Release Image` workflow run `27833556729` completed `success`; GitOps commit `e92f703` deploys web/tools/worker digests for source `282d735`; GitOps CI run `27833929688` completed `success`; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for video groundwork. Evidence: source `Release Image` workflow run `27836030980` completed `success`; GitOps commit `e576d68` deploys web/worker digests for source `e9a1135`; GitOps CI run `27836441318` completed `success`; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for video renditions/HLS. Evidence: source CI run `27849729670` and Release Image run `27849982311` completed `success`; GitOps commits `6437736` and `32ad2dc` deploy web/worker/tools digests for source `2a04229`; GitOps CI runs `27850274935` and `27850375820` completed `success`; migration job `libreplay-db-migrate-2a04229` completed; Argo is `Synced/Healthy`; full LAN E2E is `90 passed`.
+- [x] Release automation remains complete for payment fail-closed. Evidence: source CI run `27851079378` and corrected Release Image run `27851301076` completed `success`; GitOps commit `a8dbe19` deploys web/worker digests for source `d2438a0`; GitOps CI run `27851552472` completed `success`; Argo is `Synced/Healthy`; runtime health is OK; full LAN E2E is `90 passed`.
 - [x] Release automation remains complete for auth email recovery. Evidence: source CI run `27837492921` completed `success`; Release Image run `27837784400` completed `success`; GitOps commit `da4868b` deploys web/worker/tools digests for source `1bbe568`; GitOps CI run `27838078792` completed `success`; migration job `libreplay-db-migrate-1bbe568` completed; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for OAuth/CSRF hardening. Evidence: source CI run `27839801643` completed `success`; Release Image run `27840087320` completed `success`; GitOps commit `a3a6567` deploys web/worker/tools digests for source `c37cdca`; GitOps CI run `27840418461` completed `success`; migration job `libreplay-db-migrate-c37cdca` completed; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for auth email queue/redaction. Evidence: source CI run `27842739635` completed `success`; Release Image run `27843010658` completed `success`; GitOps commit `6ca7ede` deploys web/worker digests for source `53a8b48`; GitOps CI run `27843274783` completed `success`; Argo is `Synced/Healthy`.
@@ -113,6 +116,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Basic security headers exist. Evidence: HTTP response includes `permissions-policy`, `referrer-policy`, `x-content-type-options`, `x-frame-options`.
 - [x] Dependency security baseline is clean for known npm advisories. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found`.
 - [x] Auth/OAuth CSRF and Origin hardening exists. Evidence: source commit `c37cdca`; sensitive auth/account POST routes call central Origin/Fetch Metadata checks before mutation/rate-limit; production/staging fail closed without trusted Origin/Referer; LAN/dev remains compatible with API clients that omit Origin; focused and full LAN E2E pass.
+- [x] Mock payment mutation routes fail closed outside LAN/test. Evidence: source commit `d2438a0`; staging/prod config rejects mock payments; all six mock purchase routes return `503 PAYMENT_PROVIDER_NOT_CONFIGURED` before session/DB work in staging-disabled tests; PPV purchase now goes through the payment provider facade.
 - [blocked] Rate limiting is not production-grade. Evidence: in-process limiter documented as prototype-only; LAN-only rate allowances were added for validation, but production still needs Redis/distributed enforcement.
 - [blocked] Site-wide CSRF/token posture is still incomplete. Evidence: auth/account POST routes now enforce Origin/Fetch Metadata, but a double-submit CSRF token and systematic coverage for every non-auth mutating route are still pending.
 - [ ] BOLA/IDOR security review is complete. Missing: systematic tests for media, albums, conversations, reports, admin actions and creator purchases.
@@ -142,6 +146,8 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
   Evidence: source commits `9670441` and `53a8b48`, source CI runs `27841894429` and `27842739635`, Release Image runs `27842191060` and `27843010658`, GitOps commits `3c04bb9` and `6ca7ede`, GitOps CI runs `27842488604` and `27843274783`, Argo `Synced/Healthy`, focused auth E2E `7 passed`, full LAN E2E `79 passed`, `/api/health/deps` authEmail queue counts all `0`, and recent worker logs contain no action URL or token.
 - [x] Add source-level real-provider staging gates.
   Evidence: source commit `31b26c3` adds staging fail-closed env policy, config/auth/web tests, gated Playwright `staging-real-auth` project, `40-real-auth.staging.spec.ts`, and E2E docs; local gates `pnpm test`, `pnpm typecheck`, `pnpm --filter @libreplay/web build`, `pnpm audit --prod`, default Playwright list `79 tests`, gated list `81 tests` all pass.
+- [x] Add payment fail-closed/provider selection.
+  Evidence: source commit `d2438a0`, source CI run `27851079378`, Release Image run `27851301076`, GitOps commit `a8dbe19`, GitOps CI run `27851552472`, staging contract disables mock payments, LAN runtime keeps `PAYMENT_PROVIDER=mock` only under `DEPLOYMENT_MODE=lan-demo`, webhook placeholder returns `503`, focused payment/media E2E is `5 passed`, and full LAN E2E is `90 passed`.
 
 ### P1 - Auth And Identity
 
@@ -166,8 +172,10 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 - [ ] Decide PSP for adult/social product before coding Stripe as default.
   Evidence required: written PSP approval or selected adult-friendly PSP contract/technical docs.
-- [ ] Replace mock payment provider with provider abstraction selected by env.
-  Evidence required: webhook idempotency, signed webhook verification, refunds, subscription lifecycle and purchase access tests.
+- [x] Add payment provider abstraction selected by env and fail closed outside LAN/test.
+  Evidence: `PAYMENT_PROVIDER=disabled|mock`; staging/prod reject mock provider; six mock routes return `503 PAYMENT_PROVIDER_NOT_CONFIGURED` when disabled; PPV purchase no longer writes completed access without a provider charge result.
+- [ ] Integrate the selected real PSP.
+  Evidence required: webhook idempotency, signed webhook verification, refunds, subscription lifecycle, purchase access tests, dispute handling and failure-state reconciliation.
 - [ ] Add creator payout/KYC flow.
   Evidence required: onboarding/KYC status in DB/UI, payout readiness gates, revenue ledger tests.
 
@@ -200,20 +208,20 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ## Recommended Next Technical Meta
 
-`PROD-6A-PAYMENT-FAIL-CLOSED-AND-PSP-ABSTRACTION`
+`PROD-7A-SITE-WIDE-CSRF-IDOR-MUTATION-GATE`
 
-Objective: make the payments surface fail closed outside LAN/demo and prepare a provider abstraction that can support an adult-friendly PSP decision without pretending Stripe is already approved.
+Objective: systematically audit and harden every non-auth mutating API route for CSRF/origin posture, authorization/BOLA controls, and negative tests before expanding real users or payment providers.
 
 Success criteria:
 
-- [ ] Production/staging cannot route purchases through mock payments unless an explicit LAN/test mode is active.
-- [ ] Payment provider selection is environment-driven and rejects missing/unsupported provider config in staging/production.
-- [ ] Existing LAN mock purchase E2E still passes only under `DEPLOYMENT_MODE=lan-demo`.
-- [ ] Unit/API tests cover fail-closed provider selection, webhook placeholder rejection and purchase access denial on provider errors.
-- [ ] Documentation records that Stripe remains a blocked PSP decision until adult-content approval is confirmed.
-- [ ] Source CI, release, GitOps deploy and full LAN E2E remain green.
+- [ ] Generate a current inventory of all mutating `POST|PUT|PATCH|DELETE` route handlers and classify each by public/authenticated/admin/webhook/internal/demo scope.
+- [ ] Add or enforce a reusable browser-origin/CSRF guard for browser-originated non-auth mutations without breaking same-origin LAN E2E or webhook/internal exceptions.
+- [ ] Add focused negative tests for high-risk IDOR/BOLA surfaces: media variants/uploads, conversations/messages, creator purchases/subscriptions, reports/moderation, groups/clubs/events/dates and admin actions.
+- [ ] Confirm payment webhook and future provider routes are explicitly exempted only by signed-provider verification placeholder/contract, not by broad CSRF bypass.
+- [ ] Run unit/API tests, typecheck, web build, audit, lint, source CI, release, GitOps deploy and full LAN E2E after changes.
+- [ ] Update this PMO audit with route inventory, specialist checklists, residual risks and the next meta.
 
-Rationale: real Google/Facebook/SMTP staging is still blocked by external secrets, while payments remain an internal security/product risk because mock purchase paths exist. This meta is executable now and reduces the chance of accidentally treating demo monetization as production monetization.
+Rationale: real Google/Facebook/SMTP/PSP provider staging is still blocked by external secrets and approvals, while route-level CSRF/BOLA hardening is executable now and reduces the largest security risk for a social app before real users, uploads and monetization scale.
 
 ## External Policy Notes
 
