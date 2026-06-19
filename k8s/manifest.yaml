@@ -59,6 +59,7 @@ data:
   LAN_DEMO_ALLOWED_HOSTS: libreplay.lan.e-dani.com
   LAN_DEMO_ALLOWED_CIDRS: 127.0.0.1/32,::1/128,10.0.0.0/8,100.64.0.0/10,172.16.0.0/12,192.168.0.0/16
   USE_MOCK_OAUTH: "true"
+  PAYMENT_PROVIDER: mock
   ENABLE_MOCK_PAYMENTS: "true"
   ENABLE_MOCK_AGE_VERIFICATION: "true"
   ENABLE_MOCK_FACE_LIVENESS: "true"
@@ -333,7 +334,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: video-renditions-20260619-2357
+        libreplay.e-dani.com/config-rollout: payment-fail-closed-20260620-0035
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -341,7 +342,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-2a042298f46f@sha256:db7e0ed3db32a2fc8b865698b47318be4315c0c36c8e9042e8e0355c2145f149
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-d2438a0ff2cb@sha256:f11312ad087fe409ca14e26fc7029f25e177c951db18d8d619cb9047f5a83f13
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -400,7 +401,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: video-renditions-20260619-2357
+        libreplay.e-dani.com/config-rollout: payment-fail-closed-20260620-0035
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -408,7 +409,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-2a042298f46f@sha256:26e07b1b51b5781753dcfffef675bfba95ca09613402b649bfb78dc2184eb077
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-d2438a0ff2cb@sha256:aa0284ebe199dde396c0a13da03268b32aaa127341b29b0a62000888696e5730
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:

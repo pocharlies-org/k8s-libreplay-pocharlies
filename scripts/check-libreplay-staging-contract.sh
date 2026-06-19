@@ -29,6 +29,8 @@ required_config_values="
 NODE_ENV=production
 DEPLOYMENT_MODE=staging
 USE_MOCK_OAUTH=false
+PAYMENT_PROVIDER=disabled
+ENABLE_MOCK_PAYMENTS=false
 AUTH_EMAIL_PROVIDER=smtp
 ENABLE_LAN_DEMO_LOGIN=false
 "
