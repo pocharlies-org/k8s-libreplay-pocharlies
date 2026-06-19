@@ -1,8 +1,11 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-READY`
-Last updated: 2026-06-19 13:08 Europe/Madrid
+Last updated: 2026-06-19 15:15 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
+
+Current production overlay: `NOT-PRODUCTION-READY`.
+Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit: full LAN E2E is currently blocked by persistent demo state/rate limiting (`46 passed`, `27 failed`), `pnpm audit --prod` reports critical/high Next.js vulnerabilities, and all real provider integrations remain absent or disabled.
 
 ## Directives
 
@@ -12,7 +15,7 @@ Target: `https://libreplay.lan.e-dani.com`
 - [x] Secrets internos siguen en secrets. Evidence: manifest reads `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, MinIO, Meili and `SEED_USER_PASSWORD` from `libreplay-secrets`.
 - [x] Mocks visibles como LAN/no-prod. Evidence: ConfigMap enables mock flags; UI has demo/no-prod panel and creator/payment mock copy.
 - [x] LAN demo cannot be mistaken for production mode. Evidence: GitOps ConfigMap declares `DEPLOYMENT_MODE=lan-demo`; source env parser rejects `ENABLE_LAN_DEMO_LOGIN` outside `lan-demo` and rejects all critical mocks in `DEPLOYMENT_MODE=production`; web pod template carries config rollout annotation `deployment-mode-lan-demo-20260619-1302` so pods reload ConfigMap env.
-- [x] No cerrar con pods caidos, 404s, buttons mudos, skips criticos or missing secrets. Evidence: Argo `Synced/Healthy`, pods/endpoints ready, `libreplay-secrets` key contract present, Playwright LAN `73 passed`, `skipped=0`, `unexpected=0`, `flaky=0`.
+- [blocked] No cerrar con pods caidos, 404s, buttons mudos, skips criticos or missing secrets. Evidence: runtime is still Argo `Synced/Healthy`, pods/endpoints ready and `libreplay-secrets` key contract present, but current full LAN Playwright audit is blocked (`46 passed`, `27 failed`; mostly demo-login `429`, plus stateful seed exhaustion). Historical `73 passed` evidence remains below as the original LAN-demo closeout, not current production readiness.
 
 ## Acceptance Criteria
 
