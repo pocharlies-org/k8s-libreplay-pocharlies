@@ -1,14 +1,14 @@
 # LibrePlay Production Readiness PMO
 
 Status: `NOT-PRODUCTION-READY`
-Last updated: 2026-06-19 18:51 Europe/Madrid
+Last updated: 2026-06-19 19:47 Europe/Madrid
 Target today: `https://libreplay.lan.e-dani.com`
 
 ## Executive Position
 
 LibrePlay is a validated LAN demo, not a production-ready social network.
 
-PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork and auth email recovery groundwork are now fixed, but the app still lacks production payments, fully hardened OAuth, real identity/age verification providers, real CSAM/media moderation, production SMTP/queues, production video renditions/HLS, complete mobile validation, production observability, DR rehearsal and legal/compliance sign-off.
+PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork, auth email recovery groundwork and OAuth/CSRF hardening are now fixed, but the app still lacks real OAuth provider runtime/secrets, production payments, real identity/age verification providers, real CSAM/media moderation, production SMTP/queues, production video renditions/HLS, complete mobile validation, production observability, DR rehearsal and legal/compliance sign-off.
 
 ## RHO Task Checklist
 
@@ -21,12 +21,12 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ### Current Acceptance Evidence
 
-- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `1bbe568 feat(auth): add email recovery groundwork`.
-- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; auth email manifest commit `da4868b` is pushed.
-- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy` at `da4868bb8bcdaedfcc68a0c6257b7c0d81654349`; runtime web image `sha-1bbe56839b7e@sha256:cea09cfc03b8d0d9998ae424d52624c9b6047c4abd525f0c84ef93f61743efc3`, worker image `worker-sha-1bbe56839b7e@sha256:625b951057d52913ac7315317b809a52e6e9dba69d5b31a660d7293be5f2cd9d`.
+- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `c37cdca fix(auth): harden oauth and origin checks`.
+- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; OAuth/CSRF manifest commit `a3a6567` is pushed.
+- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy` at `a3a6567743ba1fff364c02f87650f2d9c9126964`; runtime web image `sha-c37cdcad6f06@sha256:fd2ed9c2553eb5d57d36c71774a91e638713742f15e06b2816009d2c857855f9`, worker image `worker-sha-c37cdcad6f06@sha256:46b77b2244d949d8b308780aa7451192d0f5ac47a0ed4ed4d0f26e9341381371`.
 - [x] LAN demo guardrail is active. Evidence: pod env has `DEPLOYMENT_MODE=lan-demo`, `NODE_ENV=production`, `ENABLE_LAN_DEMO_LOGIN=true`, `ENABLE_MOCK_PAYMENTS=true`, `ENABLE_MOCK_LLM=true`.
 - [x] Mobile smoke exists and passes. Evidence: full Playwright run includes mobile project tests `76-78` passing.
-- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-auth-full.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `78 passed (1.3m)`.
+- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-oauth-csrf-full.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `79 passed (1.3m)`.
 - [x] Production security dependency baseline is clean for known npm advisories. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found` after upgrading Next to `15.5.19`, `next-intl` to `4.13.0` and adding transitives overrides.
 
 ## Specialist Assessment
@@ -50,7 +50,9 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Credentials and OAuth architecture exists. Evidence: `packages/auth/src/providers/google.ts`, `facebook.ts`, `oauth.ts`, encrypted token fields in `AuthAccount`.
 - [x] Email verification/password reset groundwork exists. Evidence: source commit `1bbe568`; DB has `EmailVerificationToken` and `PasswordResetToken`; forgot/reset/verify/register routes are wired; forgot-password remains non-enumerating; auth package tests cover token hashing/expiry and email provider posture; focused auth E2E is `6 passed`.
 - [x] OAuth mock/token guardrails improved. Evidence: mock OAuth providers are limited to test/development/LAN demo; staging/production missing credentials return provider disabled; OAuth token encryption fails closed in staging/production without `OAUTH_TOKEN_ENC_KEY`; pending-social cookie does not store provider tokens.
-- [blocked] Real Google/Facebook login is not enabled in LAN/prod. Evidence: ConfigMap has `USE_MOCK_OAUTH=true`; live secret keys do not include `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET` or `OAUTH_TOKEN_ENC_KEY`; OAuth still lacks PKCE/nonce/id-token validation.
+- [x] OAuth protocol and account-linking hardening exists before real-provider staging. Evidence: source commit `c37cdca`; Google uses PKCE S256, nonce and `id_token` issuer/audience/nonce validation; Facebook sends documented plain PKCE and does not auto-verify Graph email; OAuth flow metadata is sealed with AES-GCM, scoped by provider+state and TTL; linking is bound to initiating session/user and handles provider/email conflicts plus P2002 races; auth tests are `20 passed`.
+- [x] Sensitive auth/account mutation routes enforce browser request origin checks. Evidence: central `enforceAuthOrigin` uses Origin, Referer and Fetch Metadata; focused LAN auth E2E is `7 passed` including cross-site rejection for login/forgot/reset/verify/logout/unlink-social; web/security tests cover production fail-closed and LAN compatibility.
+- [blocked] Real Google/Facebook login is not enabled in LAN/prod. Evidence: ConfigMap still has `USE_MOCK_OAUTH=true`; live secret keys do not include `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET` or `OAUTH_TOKEN_ENC_KEY`.
 - [blocked] Email auth is not production-grade yet. Evidence: token flows exist, but real SMTP secrets/runtime, queue/retry/observability, support recovery workflow and abuse controls are still absent.
 - [ ] Auth session hardening is complete. Missing: session rotation policy, device/session management UI, 2FA/passkeys, suspicious login alerting.
 
@@ -85,6 +87,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Release automation remains complete for image variants. Evidence: source `Release Image` workflow run `27833556729` completed `success`; GitOps commit `e92f703` deploys web/tools/worker digests for source `282d735`; GitOps CI run `27833929688` completed `success`; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for video groundwork. Evidence: source `Release Image` workflow run `27836030980` completed `success`; GitOps commit `e576d68` deploys web/worker digests for source `e9a1135`; GitOps CI run `27836441318` completed `success`; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for auth email recovery. Evidence: source CI run `27837492921` completed `success`; Release Image run `27837784400` completed `success`; GitOps commit `da4868b` deploys web/worker/tools digests for source `1bbe568`; GitOps CI run `27838078792` completed `success`; migration job `libreplay-db-migrate-1bbe568` completed; Argo is `Synced/Healthy`.
+- [x] Release automation remains complete for OAuth/CSRF hardening. Evidence: source CI run `27839801643` completed `success`; Release Image run `27840087320` completed `success`; GitOps commit `a3a6567` deploys web/worker/tools digests for source `c37cdca`; GitOps CI run `27840418461` completed `success`; migration job `libreplay-db-migrate-c37cdca` completed; Argo is `Synced/Healthy`.
 - [blocked] Production scale/HA is missing. Evidence: GitOps now has web plus worker, but still runs single replicas for web, worker, Postgres, Redis, Meili and MinIO; no HPA, PDB, NetworkPolicy, backup CronJobs or restore rehearsal.
 - [ ] Observability is production-grade. Missing: metrics, dashboards, structured logs, error tracking, alerting, SLOs, synthetic checks.
 - [ ] Disaster recovery is rehearsed. Missing: backup jobs, restore runbook, RPO/RTO targets, tested restore for Postgres/MinIO/Meili/Redis.
@@ -93,8 +96,9 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 - [x] Basic security headers exist. Evidence: HTTP response includes `permissions-policy`, `referrer-policy`, `x-content-type-options`, `x-frame-options`.
 - [x] Dependency security baseline is clean for known npm advisories. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found`.
+- [x] Auth/OAuth CSRF and Origin hardening exists. Evidence: source commit `c37cdca`; sensitive auth/account POST routes call central Origin/Fetch Metadata checks before mutation/rate-limit; production/staging fail closed without trusted Origin/Referer; LAN/dev remains compatible with API clients that omit Origin; focused and full LAN E2E pass.
 - [blocked] Rate limiting is not production-grade. Evidence: in-process limiter documented as prototype-only; LAN-only rate allowances were added for validation, but production still needs Redis/distributed enforcement.
-- [blocked] CSRF/Origin protection is incomplete. Evidence: CSRF helper exists but sensitive POST routes do not enforce a central Origin/CSRF policy.
+- [blocked] Site-wide CSRF/token posture is still incomplete. Evidence: auth/account POST routes now enforce Origin/Fetch Metadata, but a double-submit CSRF token and systematic coverage for every non-auth mutating route are still pending.
 - [ ] BOLA/IDOR security review is complete. Missing: systematic tests for media, albums, conversations, reports, admin actions and creator purchases.
 - [ ] Secrets/compliance posture is complete. Missing: production OAuth/payment secrets, secret rotation, least privilege S3 credentials, signed URL policy, audit of optional secret behavior.
 
@@ -116,6 +120,8 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
   Evidence: source commits `a55c0f6` and `e9a1135`, CI run `27835662179`, Release Image run `27836030980`, GitOps commit `e576d68`, GitOps CI run `27836441318`, Argo `Synced/Healthy`, worker runtime has `ffmpeg`/`ffprobe`, focused media E2E is `5 passed`, full LAN E2E is `76 passed`, DB/S3/Redis evidence is recorded in the master checklist.
 - [x] Add auth email recovery groundwork.
   Evidence: source commit `1bbe568`, CI run `27837492921`, Release Image run `27837784400`, GitOps commit `da4868b`, GitOps CI run `27838078792`, migration job `libreplay-db-migrate-1bbe568` complete, Argo `Synced/Healthy`, focused auth E2E is `6 passed`, full LAN E2E is `78 passed`, DB token tables and audit enum evidence is recorded in the master checklist.
+- [x] Harden OAuth protocol and auth/account Origin checks.
+  Evidence: source commit `c37cdca`, CI run `27839801643`, Release Image run `27840087320`, GitOps commit `a3a6567`, GitOps CI run `27840418461`, migration job `libreplay-db-migrate-c37cdca` complete, Argo `Synced/Healthy`, focused auth E2E is `7 passed`, OAuth start smoke is `1 passed`, full LAN E2E is `79 passed`, and verifier PASS evidence is recorded in the master checklist.
 
 ### P1 - Auth And Identity
 
@@ -127,8 +133,10 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
   Evidence: tokens stored hash-only with expiry/single-use semantics; forgot-password remains non-enumerating; reset/verify routes and pages exist; auth tests and LAN E2E pass.
 - [ ] Add production email delivery hardening.
   Evidence required: real SMTP or transactional provider secrets, queue/retry/dead-letter behavior, delivery observability, support workflow and staging smoke.
-- [ ] Harden OAuth protocol before real-provider staging.
-  Evidence required: PKCE, nonce/id-token validation for Google, stronger Facebook email trust handling, replay/concurrent-state tests and account-linking step-up/re-auth.
+- [x] Harden OAuth protocol before real-provider staging.
+  Evidence: Google PKCE S256 plus nonce/id-token validation; Facebook documented PKCE plain challenge plus no auto-verified email trust; sealed provider+state flow cookies; link session/user binding; account-linking provider/email/P2002 conflict tests; focused and full LAN E2E pass.
+- [ ] Enable real-provider staging for Google/Facebook.
+  Evidence required: Google and Meta app configuration, redirect URI validation, secrets in staging, `USE_MOCK_OAUTH=false`, real-provider smoke tests, and support runbook for provider/app-review failure modes.
 
 ### P1 - Payments
 
@@ -166,19 +174,20 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ## Recommended Next Technical Meta
 
-`PROD-3B-OAUTH-CSRF-HARDENING`
+`PROD-3C-REAL-AUTH-PROVIDERS-AND-SMTP-STAGING`
 
-Objective: harden the auth surface before any real Google/Facebook staging credentials are enabled.
+Objective: move from hardened auth code to a staging-ready real-provider auth posture without exposing production traffic.
 
 Success criteria:
 
-- [ ] Google OAuth uses PKCE and nonce, and validates `id_token` issuer/audience/expiry/nonce before trusting the profile.
-- [ ] Facebook login handles missing/unverified email explicitly and has negative tests for token/userinfo failures.
-- [ ] OAuth state is bound strongly enough to linking intent/session to prevent cross-session account-linking confusion.
-- [ ] Sensitive auth POST routes enforce central Origin/CSRF checks without breaking LAN E2E.
+- [ ] Google OAuth app/consent and redirect URIs are configured for staging; secrets exist only in secret manager/GitOps secret path.
+- [ ] Meta/Facebook Login app is configured for staging; required permissions/app-review posture is documented; secrets exist only in secret manager/GitOps secret path.
+- [ ] `USE_MOCK_OAUTH=false` staging deployment starts cleanly with real provider secrets and fails closed if any required secret is missing.
+- [ ] Production-grade SMTP/transactional email provider is configured in staging with queue/retry/dead-letter and observability.
+- [ ] Staging smoke covers Google login, Facebook login, email verification delivery, password reset delivery, negative provider failures and session/account-linking regressions.
 - [ ] Source CI, dependency audit, GitOps dry-run, Argo, health checks and full LAN E2E remain green.
 
-Rationale: PROD-3A added hash-only email recovery and fail-closed provider posture, but real providers must not be enabled until OAuth and browser-side request protections are harder.
+Rationale: PROD-3B hardened OAuth/CSRF code. The next blocker is operational: real provider apps, secrets, delivery infrastructure and staging smoke evidence.
 
 ## External Policy Notes
 

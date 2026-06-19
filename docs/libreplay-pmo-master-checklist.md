@@ -1,11 +1,29 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-19 18:51 Europe/Madrid
+Last updated: 2026-06-19 19:47 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
-Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork and auth email recovery groundwork are now green, but production is still blocked by OAuth hardening, real-provider secrets, production SMTP/queues, production video renditions/HLS, payments, DevOps/DR, compliance and observability gaps.
+Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork, auth email recovery groundwork and OAuth/CSRF hardening are now green, but production is still blocked by real-provider secrets, production SMTP/queues, production video renditions/HLS, payments, DevOps/DR, compliance and observability gaps.
+
+## 2026-06-19 PMO Iteration - OAuth/CSRF Hardening Gate
+
+- [x] Source OAuth/CSRF hardening patch committed and pushed. Evidence: source commit `c37cdca fix(auth): harden oauth and origin checks`.
+- [x] Source validation passed. Evidence: `pnpm typecheck`; `pnpm test`; `pnpm --filter @libreplay/web build`; `pnpm audit --prod`; source CI run `27839801643` completed `success` with typecheck, unit tests, web build and Docker smoke.
+- [x] Auth package hardening tests pass. Evidence: `pnpm --filter @libreplay/auth test` -> `20 passed`, covering OAuth flow cookie sealing/tamper/expiry, Google id-token claim normalization, Facebook email trust, provider posture, token encryption fail-closed and account-linking conflicts/race.
+- [x] Web/security origin tests pass. Evidence: `pnpm --filter @libreplay/security test` -> `12 passed`; `pnpm --filter @libreplay/web test` -> `11 passed`, including production fail-closed Origin handling, staging same-origin/cross-site behavior and LAN no-Origin compatibility.
+- [x] OAuth protocol is hardened enough before real-provider staging. Evidence: Google uses PKCE S256, nonce and `jose` `id_token` validation for issuer/audience/nonce before trusting `sub`; Facebook sends documented plain PKCE verifier/challenge and never treats Graph `email` as verified; OAuth flow metadata is AES-GCM sealed with TTL and provider+state cookie scoping.
+- [x] Account linking is session-bound and conflict-safe. Evidence: `start?intent=link` requires a session and seals `linkSessionId/linkUserId`; callback rejects session mismatch; linking checks provider-account and provider-email conflicts; same-user update no longer rewrites `userId`; P2002 provider-account races return `email_conflict`.
+- [x] Sensitive auth/account POST routes enforce Origin/Fetch Metadata. Evidence: `/api/auth/login`, `register`, `logout`, `forgot-password`, `reset-password`, `verify-email`, `demo-login`, `demo-reset` and `/api/me/security/unlink-social` call `enforceAuthOrigin` before mutating state or consuming rate limits.
+- [x] Official release digests were published. Evidence: Release Image run `27840087320` completed `success` for source `c37cdcad6f06`; web digest `sha256:fd2ed9c2553eb5d57d36c71774a91e638713742f15e06b2816009d2c857855f9`; tools digest `sha256:74b4b91f3ec0f2c55886ddec27afa56fe437decf4dcef125cd77a29a1763be3f`; worker digest `sha256:46b77b2244d949d8b308780aa7451192d0f5ac47a0ed4ed4d0f26e9341381371`; seed digest `sha256:60deb5a27260d5e509caa2802752f4540bba669a13e6b8cc196be87853ad21b0`.
+- [x] GitOps deploys web, worker and migration by digest. Evidence: GitOps commit `a3a6567 feat: deploy libreplay oauth csrf hardening`; GitOps CI run `27840418461` completed `success`; `kubectl apply --dry-run=server -f k8s/manifest.yaml` passed; obsolete completed job `libreplay-db-migrate-1bbe568` was deleted after new job succeeded because Argo has `prune=false`.
+- [x] Runtime is on the expected revision. Evidence: Argo `Synced/Healthy` at `a3a6567743ba1fff364c02f87650f2d9c9126964`; `libreplay-web` uses `sha-c37cdcad6f06@sha256:fd2ed9c2553eb5d57d36c71774a91e638713742f15e06b2816009d2c857855f9`; `libreplay-worker` uses `worker-sha-c37cdcad6f06@sha256:46b77b2244d949d8b308780aa7451192d0f5ac47a0ed4ed4d0f26e9341381371`; `Job/libreplay-db-migrate-c37cdca` completed `1/1`.
+- [x] Runtime auth/OAuth E2E remains green. Evidence: focused auth Playwright `e2e/03-auth.anon.spec.ts` -> `7 passed`, including cross-site Origin rejection for login/forgot/reset/verify/logout/unlink-social; OAuth start smoke `e2e/14-coverage-extras.anon.spec.ts -g "OAuth start"` -> `1 passed`.
+- [x] Full LAN E2E remains green with mobile smoke. Evidence: full LAN Playwright `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-oauth-csrf-full.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `79 passed (1.3m)`, including mobile tests `77-79`.
+- [x] Runtime health remains clean. Evidence: `/api/health/deps=200` with postgres/redis/minio/meilisearch `ok:true`; pods/jobs are running/completed with zero restarts; Redis `bull:media-moderation` wait/active/delayed/failed all `0`; recent web/worker logs contain no `error`, `exception` or `failed` matches.
+- [x] Independent verifier pass completed. Evidence: Hilbert first reported FAIL for Facebook PKCE documentation, account-linking race and missing tests; after fixes, Hilbert re-audited and reported PASS for committing/deploying PROD-3B.
+- [blocked] Production readiness remains blocked. Evidence: real Google/Facebook credentials are not present/enabled in runtime, `USE_MOCK_OAUTH=true` remains LAN-only, real SMTP queue/retry/observability is absent, payments are mock-only, video HLS/renditions are absent, and production HA/DR/compliance/observability gates remain open.
 
 ## 2026-06-19 PMO Iteration - Auth Email Recovery Gate
 
@@ -23,7 +41,7 @@ Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readine
 - [x] Full LAN E2E remains green with mobile smoke. Evidence: full LAN Playwright `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-auth-full.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `78 passed (1.3m)`, including mobile tests `76-78`.
 - [x] Runtime health remains clean. Evidence: `/api/health=200`; `/api/health/deps=200` with postgres/redis/minio/meilisearch `ok:true`; pods are running/completed with zero restarts; worker logs show `media-moderation completed 15/16`; Redis `bull:media-moderation` wait/active/delayed/failed all `0`.
 - [x] Independent auth/security verifier passes completed. Evidence: Pascal and Ramanujan identified the PROD-3 blockers; Halley reported PASS for committing source PROD-3A after verifying schema, route wiring, OAuth guardrails, token storage and tests.
-- [blocked] Production readiness remains blocked. Evidence: OAuth still lacks PKCE/nonce/id-token validation, CSRF/Origin checks are not enforced on sensitive POSTs, real SMTP/OAuth secrets are absent from GitOps, email delivery has no queue/retry/observability, and the app still runs LAN mocks.
+- [blocked] Production readiness remains blocked. Evidence: OAuth/CSRF code hardening is now closed by the later OAuth/CSRF gate, but real SMTP/OAuth secrets are absent from GitOps, email delivery has no queue/retry/observability, and the app still runs LAN mocks.
 
 ## 2026-06-19 PMO Iteration - Video Groundwork Gate
 
@@ -103,7 +121,7 @@ Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readine
 - [x] Secrets internos siguen en secrets. Evidence: manifest reads `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, MinIO, Meili and `SEED_USER_PASSWORD` from `libreplay-secrets`.
 - [x] Mocks visibles como LAN/no-prod. Evidence: ConfigMap enables mock flags; UI has demo/no-prod panel and creator/payment mock copy.
 - [x] LAN demo cannot be mistaken for production mode. Evidence: GitOps ConfigMap declares `DEPLOYMENT_MODE=lan-demo`; source env parser rejects `ENABLE_LAN_DEMO_LOGIN` outside `lan-demo` and rejects all critical mocks in `DEPLOYMENT_MODE=production`; web pod template carries config rollout annotation `deployment-mode-lan-demo-20260619-1302` so pods reload ConfigMap env.
-- [x] No cerrar con pods caidos, 404s, buttons mudos, skips criticos or missing secrets in LAN validation. Evidence: current full LAN Playwright is `78 passed`, Argo is `Synced/Healthy`, web and worker pods are `1/1`, and reset/rate-limit issues are fixed for `DEPLOYMENT_MODE=lan-demo`.
+- [x] No cerrar con pods caidos, 404s, buttons mudos, skips criticos or missing secrets in LAN validation. Evidence: current full LAN Playwright is `79 passed`, Argo is `Synced/Healthy`, web and worker pods are `1/1`, and reset/rate-limit issues are fixed for `DEPLOYMENT_MODE=lan-demo`.
 
 ## Acceptance Criteria
 
