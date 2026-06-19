@@ -329,7 +329,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: media-worker-20260619-1644
+        libreplay.e-dani.com/config-rollout: media-variants-20260619-1713
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -337,7 +337,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-1d86d1d37e2a@sha256:0da74798859d5c8c27261885adfb648ebf6ed88d671ee1de5bef05cfd76255ab
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-282d7355f43e@sha256:aac3233831286fc38747f0fd5bd81107174532c7bcfabc4bd4aa903d0d714d66
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -388,7 +388,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: media-worker-20260619-1644
+        libreplay.e-dani.com/config-rollout: media-variants-20260619-1713
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -396,7 +396,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-1d86d1d37e2a@sha256:4a156bdd8b6851a0d5028a62c886b452f61bc67655a851991086bdae8091fbe5
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-282d7355f43e@sha256:fa93aabbca6c3db25851d5cae6d17efd401f28554f39867909adad9b8fc399cb
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
@@ -461,7 +461,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: libreplay-db-migrate-59e0512
+  name: libreplay-db-migrate-282d735
   namespace: libreplay
   annotations:
     argocd.argoproj.io/sync-wave: "2"
@@ -480,7 +480,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: migrate
-          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-59e051279464@sha256:d5183716a46f849f8f1df8676767f2c00a92cd5e29e1d2b1caf8bb51cbd029db
+          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-282d7355f43e@sha256:602b39a0b85ff1f3007df22caf410aa294247db59f63ff4d885de95a7f751979
           env:
             - name: DATABASE_URL
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
