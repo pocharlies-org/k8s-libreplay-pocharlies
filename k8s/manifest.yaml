@@ -33,9 +33,10 @@ spec:
 # Required keys in Vault `secret/libreplay` before any scale-up:
 # DATABASE_URL, REDIS_URL, AUTH_SECRET, MINIO_ACCESS_KEY, MINIO_SECRET_KEY,
 # MEILISEARCH_API_KEY, DB_USER, DB_PASSWORD, SEED_USER_PASSWORD.
-# Optional provider keys stay empty/absent in staging until real providers are enabled:
+# Optional provider/email keys stay empty/absent in LAN demo until real providers are enabled:
 # GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FACEBOOK_CLIENT_ID,
-# FACEBOOK_CLIENT_SECRET, OAUTH_TOKEN_ENC_KEY.
+# FACEBOOK_CLIENT_SECRET, OAUTH_TOKEN_ENC_KEY, SMTP_HOST, SMTP_PORT,
+# SMTP_USER, SMTP_PASSWORD.
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -51,6 +52,9 @@ data:
   DEFAULT_LOCALE: es
   SUPPORTED_LOCALES: es,en,fr,de,pt
   RATE_LIMIT_DISABLED: "false"
+  AUTH_EMAIL_PROVIDER: console
+  MAIL_FROM: LibrePlay <noreply@libreplay.local>
+  SMTP_SECURE: "false"
   ENABLE_LAN_DEMO_LOGIN: "true"
   LAN_DEMO_ALLOWED_HOSTS: libreplay.lan.e-dani.com
   LAN_DEMO_ALLOWED_CIDRS: 127.0.0.1/32,::1/128,10.0.0.0/8,100.64.0.0/10,172.16.0.0/12,192.168.0.0/16
@@ -329,7 +333,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: oauth-csrf-20260619-1945
+        libreplay.e-dani.com/config-rollout: auth-email-queue-20260619-2032
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -337,7 +341,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-c37cdcad6f06@sha256:fd2ed9c2553eb5d57d36c71774a91e638713742f15e06b2816009d2c857855f9
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-9670441d513b@sha256:ff632db626c09c74a624a888e10960f0e10cee83ce19cf6be531b73bed4bfb74
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -364,6 +368,14 @@ spec:
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: FACEBOOK_CLIENT_SECRET, optional: true } }
             - name: OAUTH_TOKEN_ENC_KEY
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: OAUTH_TOKEN_ENC_KEY, optional: true } }
+            - name: SMTP_HOST
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SMTP_HOST, optional: true } }
+            - name: SMTP_PORT
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SMTP_PORT, optional: true } }
+            - name: SMTP_USER
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SMTP_USER, optional: true } }
+            - name: SMTP_PASSWORD
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SMTP_PASSWORD, optional: true } }
           resources:
             requests: { cpu: 100m, memory: 256Mi }
             limits:   { memory: 1Gi }
@@ -388,7 +400,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: oauth-csrf-20260619-1945
+        libreplay.e-dani.com/config-rollout: auth-email-queue-20260619-2032
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -396,7 +408,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-c37cdcad6f06@sha256:46b77b2244d949d8b308780aa7451192d0f5ac47a0ed4ed4d0f26e9341381371
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-9670441d513b@sha256:0beaee5a2055a15673bfb18a3ed658278567104ff4d27f9b714940e2569cb445
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
@@ -412,6 +424,14 @@ spec:
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_SECRET_KEY } }
             - name: MEILISEARCH_API_KEY
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MEILISEARCH_API_KEY } }
+            - name: SMTP_HOST
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SMTP_HOST, optional: true } }
+            - name: SMTP_PORT
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SMTP_PORT, optional: true } }
+            - name: SMTP_USER
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SMTP_USER, optional: true } }
+            - name: SMTP_PASSWORD
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SMTP_PASSWORD, optional: true } }
           resources:
             requests: { cpu: 100m, memory: 256Mi }
             limits:   { memory: 512Mi }
