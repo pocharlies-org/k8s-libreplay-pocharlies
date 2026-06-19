@@ -1,11 +1,22 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-19 16:10 Europe/Madrid
+Last updated: 2026-06-19 16:22 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
-Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation is now green, but production is still blocked by real-provider, media, payments, DevOps/DR, compliance and observability gaps.
+Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation and release automation are now green, but production is still blocked by real-provider, media, payments, DevOps/DR, compliance and observability gaps.
+
+## 2026-06-19 PMO Iteration - Release Automation Gate
+
+- [x] GitHub release secrets exist by name without exposing values. Evidence: `gh secret list --repo pocharlies-org/libreplay` showed `HARBOR_USER` and `HARBOR_PASSWORD`, updated `2026-06-19T14:12:39Z/14:12:40Z`.
+- [x] `Release Image` workflow is active and dispatchable. Evidence: [release.yml](/home/dibanez/k8s/libreplay/.github/workflows/release.yml:1) has `workflow_dispatch`; `gh workflow list` showed it `active`.
+- [x] Release workflow publishes web/tools/seed without manual Harbor push. Evidence: `pocharlies-org/libreplay` run `27830810054` completed `success`; `docker/login-action@v3` and `Build and push image` steps passed.
+- [x] Official release digests exist. Evidence: `harbor.e-dani.com/homelab/libreplay-web:sha-b3ebad4ac482@sha256:d7eeb53810159c9bc7fc3ed5355eac4d094ba1e7b213932b72ef3601d85df26c`, tools digest `sha256:0b76bf0b6af981dd6a359f99c3788977d8d13ec45eacecac351beaaf1caabe4b`, seed digest `sha256:1593f9054629e2d5de3e151be8ca19b3009cc37645156fc7975726f83f75161c`.
+- [x] GitOps deploys the official release web digest. Evidence: GitOps commit `1329105 fix: deploy libreplay release workflow image`, GitOps CI run `27831093880` completed `success`; Argo revision `1329105487400b531ebef6c3eb0541288bdb9ba5` is `Synced/Healthy`, web deployment is `1/1`, observedGeneration `20/20`.
+- [x] Full LAN Playwright remains green on the official release image. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-release-workflow-b3ebad4.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `73 passed (1.3m)`.
+- [x] Independent release verifier pass completed. Evidence: subagent `019ee039-d912-7ee3-8991-4fa651cb98c8` reported PASS for secrets-by-name, workflow run `27830810054`, Harbor login, published digests and read-only preservation.
+- [blocked] Production readiness remains blocked. Evidence: no real OAuth secrets/runtime, no real email verification/reset, payments are mock-only, no media worker/transcoding, no HA/backup/observability baseline.
 
 ## 2026-06-19 PMO Iteration - QA/Security Gate
 
@@ -19,7 +30,7 @@ Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readine
 - [x] Production dependency audit is clean. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found`.
 - [x] Source CI passed. Evidence: `pocharlies-org/libreplay` CI run `27830389764` completed `success`.
 - [x] GitOps CI passed. Evidence: `pocharlies-org/k8s-libreplay-pocharlies` CI run `27830499649` completed `success`.
-- [blocked] Production readiness remains blocked. Evidence: no real OAuth secrets/runtime, no real email verification/reset, payments are mock-only, no media worker/transcoding, release workflow secrets remain missing, no HA/backup/observability baseline.
+- [blocked] Production readiness remains blocked. Evidence: no real OAuth secrets/runtime, no real email verification/reset, payments are mock-only, no media worker/transcoding, no HA/backup/observability baseline.
 
 ## Directives
 
