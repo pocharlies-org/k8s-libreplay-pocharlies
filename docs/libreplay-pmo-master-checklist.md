@@ -1,7 +1,7 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-READY`
-Last updated: 2026-06-19 01:38 Europe/Madrid
+Last updated: 2026-06-19 12:36 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 ## Directives
@@ -26,6 +26,8 @@ Target: `https://libreplay.lan.e-dani.com`
 ## Source / Build
 
 - [x] LAN demo source committed. Evidence: `/home/dibanez/k8s/libreplay` commits through `2365959 fix: make LAN demo e2e repeatable` pushed to `origin/main`.
+- [x] Source canonical repo is in the ARC-backed org. Evidence: `origin` for `/home/dibanez/k8s/libreplay` is `git@github.com:pocharlies-org/libreplay.git`; previous personal repo remains as remote `personal` for traceability.
+- [x] Source CI runs on ARC `arc-k8s` and is green. Evidence: `pocharlies-org/libreplay` run `27820394287` completed successfully on 2026-06-19; job `verify` passed `checkout`, `pnpm/action-setup`, `setup-node`, `pnpm install --frozen-lockfile`, Prisma generate, typecheck, unit tests, web build and Docker build smoke in `5m45s`.
 - [x] `pnpm install --frozen-lockfile`. Evidence: exited 0; lockfile up to date and already up to date.
 - [x] `pnpm typecheck`. Evidence: exited 0 on 2026-06-19.
 - [x] `pnpm test`. Evidence: exited 0; config 4 tests, security 7 tests, auth no-tests pass, web 8 tests.
