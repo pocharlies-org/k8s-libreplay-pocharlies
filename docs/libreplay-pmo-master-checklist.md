@@ -1,11 +1,29 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-19 18:13 Europe/Madrid
+Last updated: 2026-06-19 18:51 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
-Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants and video probe/thumbnail groundwork are now green, but production is still blocked by real-provider identity, production video renditions/HLS, payments, DevOps/DR, compliance and observability gaps.
+Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork and auth email recovery groundwork are now green, but production is still blocked by OAuth hardening, real-provider secrets, production SMTP/queues, production video renditions/HLS, payments, DevOps/DR, compliance and observability gaps.
+
+## 2026-06-19 PMO Iteration - Auth Email Recovery Gate
+
+- [x] Source auth email recovery patch committed and pushed. Evidence: source commit `1bbe568 feat(auth): add email recovery groundwork`.
+- [x] Source validation passed. Evidence: `pnpm install --frozen-lockfile`; `DATABASE_URL=postgresql://libreplay:secret@localhost:55432/libreplay pnpm --filter @libreplay/db exec prisma validate`; `pnpm typecheck`; `pnpm test`; `pnpm --filter @libreplay/web build`; `pnpm audit --prod`; Playwright list reports `78 tests`.
+- [x] Auth package now has direct tests. Evidence: `pnpm --filter @libreplay/auth test` -> `8 passed`, covering token purpose hashing/expiry, OAuth mock posture, OAuth token encryption fail-closed and console email blocked in staging.
+- [x] Email verification/reset token schema is deployed. Evidence: migration `20260619181500_auth_email_tokens`; DB has `EmailVerificationToken` and `PasswordResetToken`; `AuditAction` enum has `EMAIL_VERIFICATION_REQUESTED`, `EMAIL_VERIFIED`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_RESET_COMPLETED`.
+- [x] Forgot/reset/verify/register routes are wired without email enumeration. Evidence: `forgot-password` creates a reset token only when a user exists but always returns OK; `reset-password` consumes one-time reset tokens; `verify-email` consumes one-time verification tokens; `register` creates verification tokens outside auto-verified dev/LAN/test posture.
+- [x] OAuth base guardrails improved. Evidence: mock OAuth providers are only selected in test/development/LAN demo; staging/production with missing provider credentials returns provider disabled instead of silently falling back to mocks; OAuth token encryption throws in staging/production when `OAUTH_TOKEN_ENC_KEY` is absent.
+- [x] Pending social cookie no longer carries provider tokens. Evidence: OAuth callback stores pending-social profile with `accessToken=null`, `refreshToken=null`, `raw={}`.
+- [x] Official release digests were published. Evidence: Release Image run `27837784400` completed `success` for source `1bbe56839b7e9f9b60210f1a358648bb2e532d98`; web digest `sha256:cea09cfc03b8d0d9998ae424d52624c9b6047c4abd525f0c84ef93f61743efc3`; tools digest `sha256:a29b311546377fa76e0d5cd6e2539550529db4489b5b71efb2abc9da8f35d532`; worker digest `sha256:625b951057d52913ac7315317b809a52e6e9dba69d5b31a660d7293be5f2cd9d`; seed digest `sha256:64ee02daf563d9bf44b0b10d986b402aef3806719a2672dec3048c0535137cef`.
+- [x] GitOps deploys web, worker and migration by digest. Evidence: GitOps commit `da4868b feat: deploy libreplay auth email groundwork`; GitOps CI run `27838078792` completed `success`; `kubectl apply --dry-run=server -f k8s/manifest.yaml` passed; obsolete completed job `libreplay-db-migrate-282d735` was deleted after new job succeeded because Argo has `prune=false`.
+- [x] Runtime is on the expected revision. Evidence: Argo `Synced/Healthy` at `da4868bb8bcdaedfcc68a0c6257b7c0d81654349`; `libreplay-web` uses `sha-1bbe56839b7e@sha256:cea09cfc03b8d0d9998ae424d52624c9b6047c4abd525f0c84ef93f61743efc3`; `libreplay-worker` uses `worker-sha-1bbe56839b7e@sha256:625b951057d52913ac7315317b809a52e6e9dba69d5b31a660d7293be5f2cd9d`; `Job/libreplay-db-migrate-1bbe568` completed `1/1`.
+- [x] LAN auth E2E remains green. Evidence: focused auth Playwright `e2e/03-auth.anon.spec.ts` -> `6 passed`, including forgot-password confirmation, invalid reset token rejection and invalid verify-email token rejection.
+- [x] Full LAN E2E remains green with mobile smoke. Evidence: full LAN Playwright `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-auth-full.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `78 passed (1.3m)`, including mobile tests `76-78`.
+- [x] Runtime health remains clean. Evidence: `/api/health=200`; `/api/health/deps=200` with postgres/redis/minio/meilisearch `ok:true`; pods are running/completed with zero restarts; worker logs show `media-moderation completed 15/16`; Redis `bull:media-moderation` wait/active/delayed/failed all `0`.
+- [x] Independent auth/security verifier passes completed. Evidence: Pascal and Ramanujan identified the PROD-3 blockers; Halley reported PASS for committing source PROD-3A after verifying schema, route wiring, OAuth guardrails, token storage and tests.
+- [blocked] Production readiness remains blocked. Evidence: OAuth still lacks PKCE/nonce/id-token validation, CSRF/Origin checks are not enforced on sensitive POSTs, real SMTP/OAuth secrets are absent from GitOps, email delivery has no queue/retry/observability, and the app still runs LAN mocks.
 
 ## 2026-06-19 PMO Iteration - Video Groundwork Gate
 
@@ -85,7 +103,7 @@ Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readine
 - [x] Secrets internos siguen en secrets. Evidence: manifest reads `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, MinIO, Meili and `SEED_USER_PASSWORD` from `libreplay-secrets`.
 - [x] Mocks visibles como LAN/no-prod. Evidence: ConfigMap enables mock flags; UI has demo/no-prod panel and creator/payment mock copy.
 - [x] LAN demo cannot be mistaken for production mode. Evidence: GitOps ConfigMap declares `DEPLOYMENT_MODE=lan-demo`; source env parser rejects `ENABLE_LAN_DEMO_LOGIN` outside `lan-demo` and rejects all critical mocks in `DEPLOYMENT_MODE=production`; web pod template carries config rollout annotation `deployment-mode-lan-demo-20260619-1302` so pods reload ConfigMap env.
-- [x] No cerrar con pods caidos, 404s, buttons mudos, skips criticos or missing secrets in LAN validation. Evidence: current full LAN Playwright is `76 passed`, Argo is `Synced/Healthy`, web and worker pods are `1/1`, and reset/rate-limit issues are fixed for `DEPLOYMENT_MODE=lan-demo`.
+- [x] No cerrar con pods caidos, 404s, buttons mudos, skips criticos or missing secrets in LAN validation. Evidence: current full LAN Playwright is `78 passed`, Argo is `Synced/Healthy`, web and worker pods are `1/1`, and reset/rate-limit issues are fixed for `DEPLOYMENT_MODE=lan-demo`.
 
 ## Acceptance Criteria
 
