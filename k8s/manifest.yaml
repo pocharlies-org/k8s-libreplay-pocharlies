@@ -333,7 +333,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: real-auth-staging-gates-20260619-2115
+        libreplay.e-dani.com/config-rollout: pending-social-email-20260619-2222
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -341,7 +341,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-31b26c35eee0@sha256:b1c2ab433f9aa85d895b48e770809876d8efda6d54264ac61f75f0e073ee3529
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-783bb8da7338@sha256:95e6e4614879e40ff0d03552453a5c66f3ad7abba345b96afe7fdc1a6463ed55
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -400,7 +400,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: real-auth-staging-gates-20260619-2115
+        libreplay.e-dani.com/config-rollout: pending-social-email-20260619-2222
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -408,7 +408,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-31b26c35eee0@sha256:a329d595cbaf608b183ea2deea7e187c6d7ef5c5f0b8d2809b389fd60d75354b
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-783bb8da7338@sha256:ffdd4cf9c6679ab69f7d3dae9d7103038e0a0f0c7cc626bea52fdd5dd24da979
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
