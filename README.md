@@ -12,3 +12,7 @@ Gestionado por ArgoCD desde [k8s-gitops-pocharlies](https://github.com/pocharlie
 ## Estado operativo
 - 2026-05-22: LibreReplay queda parado a `replicas: 0` completo hasta migrar/sembrar datos.
 - PVCs y Services se conservan para la futura migración de Postgres, Redis, MinIO y Meilisearch.
+- 2026-06-19: LAN demo validado, pero producción sigue bloqueada. Auditoría PMO:
+  [docs/libreplay-production-readiness-pmo.md](docs/libreplay-production-readiness-pmo.md).
+  Runbook para desbloquear staging real de Google/Facebook/SMTP:
+  [docs/libreplay-staging-auth-runbook.md](docs/libreplay-staging-auth-runbook.md).

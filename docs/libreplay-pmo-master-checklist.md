@@ -1,11 +1,25 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-19 21:01 Europe/Madrid
+Last updated: 2026-06-19 21:15 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
-Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs and staging/prod SMTP/OAuth guardrails are now green, but production is still blocked by real-provider secrets, real SMTP delivery in staging/prod, production video renditions/HLS, payments, DevOps/DR, compliance and observability gaps.
+Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated staging real-provider smokes and staging auth runbook are now green, but production is still blocked by real-provider secrets, real SMTP delivery in staging/prod, production video renditions/HLS, payments, DevOps/DR, compliance and observability gaps.
+
+## 2026-06-19 PMO Iteration - Real Provider Staging Gate Scaffold
+
+- [x] Source real-provider staging gate patch committed and pushed. Evidence: source commit `31b26c3 test(auth): add real provider staging gates`.
+- [x] Staging app config is fail-closed for OAuth. Evidence: `DEPLOYMENT_MODE=staging` now rejects `USE_MOCK_OAUTH=true`, missing `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET` and missing `OAUTH_TOKEN_ENC_KEY`.
+- [x] Config/auth/web tests cover the stricter staging contract. Evidence: `packages/config` env tests include `rejects staging when mock OAuth remains enabled`; auth provider posture tests expect staging config failure instead of provider-disabled success; web CSRF staging fixture includes real-provider dummy keys.
+- [x] Gated Playwright project exists without polluting default LAN suite. Evidence: default `npx playwright test --list` reports `79 tests in 22 files`; `PW_STAGING_REAL_AUTH=1 npx playwright test --list` reports `81 tests in 23 files`.
+- [x] Real-provider staging smoke criteria are encoded. Evidence: `40-real-auth.staging.spec.ts` asserts Google OAuth start redirects to `accounts.google.com`, Facebook start redirects to `facebook.com`, and forgot-password drains `authEmail` with no failed jobs.
+- [x] Source local and official validation passed. Evidence: `pnpm --filter @libreplay/config test` -> `15 passed`; `pnpm --filter @libreplay/auth test` -> `20 passed`; `pnpm --filter @libreplay/web typecheck` passed; `pnpm test` passed; `pnpm typecheck` passed; `pnpm --filter @libreplay/web build` passed; `pnpm audit --prod` -> `No known vulnerabilities found`; source CI run `27844167141` completed `success`.
+- [x] Official release digests were published. Evidence: Release Image run `27844447288` completed `success`; web digest `sha256:b1c2ab433f9aa85d895b48e770809876d8efda6d54264ac61f75f0e073ee3529`; worker digest `sha256:a329d595cbaf608b183ea2deea7e187c6d7ef5c5f0b8d2809b389fd60d75354b`; tools digest `sha256:dc07aceea8e121e7d54c8a955e7e51e1cec2e1f7a8725f7a17b725ddbe5c6074`; seed digest `sha256:44e1d9a23788b626c29a903ed83bf22164840c04eb88c3031f2e5f79625c019b`.
+- [x] Staging auth runbook and contract check exist. Evidence: [libreplay-staging-auth-runbook.md](./libreplay-staging-auth-runbook.md) and `scripts/check-libreplay-staging-contract.sh`; `sh -n scripts/check-libreplay-staging-contract.sh` and `git diff --check` passed.
+- [x] Specialist PMO passes completed. Evidence: Wegener Security/Auth reported `BLOCKED` until real secrets/staging app exist; Kepler Architect/DevOps reported no live `libreplay-staging` app/namespace/ExternalSecret and recommended Argo app + Kustomize overlay + per-env Vault path; Galileo PO/QA reported current E2E lacks real callback/inbox/linking smokes and prioritized gated staging smokes/runbook.
+- [blocked] GitOps deploy/runtime evidence is pending. Evidence: source CI/release are green and GitOps manifest now points web/worker at `31b26c3` digests; GitOps CI, Argo sync, health and LAN E2E must still be recorded before this runtime gate is closed.
+- [blocked] Full real-provider staging remains blocked. Evidence: no live `libreplay-staging` Argo app/namespace/ExternalSecret exists, and current runtime secret key names still lack Google/Facebook/OAuth encryption/SMTP provider keys.
 
 ## 2026-06-19 PMO Iteration - Auth Email Queue And Staging Guardrails Gate
 

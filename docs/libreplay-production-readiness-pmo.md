@@ -1,14 +1,14 @@
 # LibrePlay Production Readiness PMO
 
 Status: `NOT-PRODUCTION-READY`
-Last updated: 2026-06-19 21:01 Europe/Madrid
+Last updated: 2026-06-19 21:15 Europe/Madrid
 Target today: `https://libreplay.lan.e-dani.com`
 
 ## Executive Position
 
 LibrePlay is a validated LAN demo, not a production-ready social network.
 
-PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs and staging/prod SMTP/OAuth guardrails are now fixed, but the app still lacks real OAuth provider runtime/secrets, production payments, real identity/age verification providers, real CSAM/media moderation, real SMTP provider delivery in staging/prod, production video renditions/HLS, complete mobile validation, production observability, DR rehearsal and legal/compliance sign-off.
+PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated real-provider Playwright smoke and staging auth runbook are now fixed, but the app still lacks real OAuth provider runtime/secrets, production payments, real identity/age verification providers, real CSAM/media moderation, real SMTP provider delivery in staging/prod, production video renditions/HLS, complete mobile validation, production observability, DR rehearsal and legal/compliance sign-off.
 
 ## RHO Task Checklist
 
@@ -29,6 +29,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 npx playwright test --reporter=line` from `apps/web` -> `79 passed (1.3m)`.
 - [x] Production security dependency baseline is clean for known npm advisories. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found` after upgrading Next to `15.5.19`, `next-intl` to `4.13.0` and adding transitives overrides.
 - [x] Auth email queue is deployed and drains. Evidence: `/api/health/deps` reports `authEmail` waiting/active/delayed/failed all `0`; worker logs show `[auth-email:password_reset] queued console delivery to=demo-member@libreplay.local` and `auth-email completed 2 password_reset` with no URL or token.
+- [x] Staging can no longer pass with mock OAuth enabled at app-config level. Evidence: source commit `31b26c3`; `DEPLOYMENT_MODE=staging` requires `USE_MOCK_OAUTH=false`, Google/Facebook secrets and `OAUTH_TOKEN_ENC_KEY`.
 
 ## Specialist Assessment
 
@@ -56,6 +57,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [blocked] Real Google/Facebook login is not enabled in LAN/prod. Evidence: ConfigMap still has `USE_MOCK_OAUTH=true`; live secret keys do not include `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET` or `OAUTH_TOKEN_ENC_KEY`.
 - [x] Auth email queue/retry groundwork exists. Evidence: source commit `9670441 feat(auth): queue transactional emails`; `register` and `forgot-password` enqueue `auth-email` jobs, worker processes auth email separately from media, `/api/health/deps` exposes queue counts, and completed jobs are removed immediately.
 - [x] Console auth-email logging is redacted. Evidence: source commit `53a8b48 fix(auth): redact console email action urls`; final worker logs contain recipient and job metadata only, and `rg 'token=|url=|reset-password|verify-email|password-reset|actionUrl'` against recent worker logs found no matches.
+- [x] Real-provider staging smoke is defined without weakening LAN suite. Evidence: source commit `31b26c3` adds gated Playwright project `staging-real-auth`; default LAN suite remains `79 tests`, gated staging list is `81 tests` only when `PW_STAGING_REAL_AUTH=1`.
 - [blocked] Email auth is not production-grade yet. Evidence: token flows and queue/retry groundwork exist, but real SMTP secrets/runtime, real provider delivery, staging smoke, delivery observability, support recovery workflow and abuse controls are still absent.
 - [ ] Auth session hardening is complete. Missing: session rotation policy, device/session management UI, 2FA/passkeys, suspicious login alerting.
 
@@ -92,6 +94,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Release automation remains complete for auth email recovery. Evidence: source CI run `27837492921` completed `success`; Release Image run `27837784400` completed `success`; GitOps commit `da4868b` deploys web/worker/tools digests for source `1bbe568`; GitOps CI run `27838078792` completed `success`; migration job `libreplay-db-migrate-1bbe568` completed; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for OAuth/CSRF hardening. Evidence: source CI run `27839801643` completed `success`; Release Image run `27840087320` completed `success`; GitOps commit `a3a6567` deploys web/worker/tools digests for source `c37cdca`; GitOps CI run `27840418461` completed `success`; migration job `libreplay-db-migrate-c37cdca` completed; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for auth email queue/redaction. Evidence: source CI run `27842739635` completed `success`; Release Image run `27843010658` completed `success`; GitOps commit `6ca7ede` deploys web/worker digests for source `53a8b48`; GitOps CI run `27843274783` completed `success`; Argo is `Synced/Healthy`.
+- [blocked] Deploy evidence for staging auth gate source is pending. Evidence: source CI run `27844167141` and Release Image run `27844447288` completed `success`; GitOps deploy/Argo/LAN E2E evidence for source `31b26c3` is still pending.
 - [blocked] Production scale/HA is missing. Evidence: GitOps now has web plus worker, but still runs single replicas for web, worker, Postgres, Redis, Meili and MinIO; no HPA, PDB, NetworkPolicy, backup CronJobs or restore rehearsal.
 - [ ] Observability is production-grade. Missing: metrics, dashboards, structured logs, error tracking, alerting, SLOs, synthetic checks.
 - [ ] Disaster recovery is rehearsed. Missing: backup jobs, restore runbook, RPO/RTO targets, tested restore for Postgres/MinIO/Meili/Redis.
@@ -128,6 +131,8 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
   Evidence: source commit `c37cdca`, CI run `27839801643`, Release Image run `27840087320`, GitOps commit `a3a6567`, GitOps CI run `27840418461`, migration job `libreplay-db-migrate-c37cdca` complete, Argo `Synced/Healthy`, focused auth E2E is `7 passed`, OAuth start smoke is `1 passed`, full LAN E2E is `79 passed`, and verifier PASS evidence is recorded in the master checklist.
 - [x] Queue transactional auth emails and remove token-bearing console logs.
   Evidence: source commits `9670441` and `53a8b48`, source CI runs `27841894429` and `27842739635`, Release Image runs `27842191060` and `27843010658`, GitOps commits `3c04bb9` and `6ca7ede`, GitOps CI runs `27842488604` and `27843274783`, Argo `Synced/Healthy`, focused auth E2E `7 passed`, full LAN E2E `79 passed`, `/api/health/deps` authEmail queue counts all `0`, and recent worker logs contain no action URL or token.
+- [x] Add source-level real-provider staging gates.
+  Evidence: source commit `31b26c3` adds staging fail-closed env policy, config/auth/web tests, gated Playwright `staging-real-auth` project, `40-real-auth.staging.spec.ts`, and E2E docs; local gates `pnpm test`, `pnpm typecheck`, `pnpm --filter @libreplay/web build`, `pnpm audit --prod`, default Playwright list `79 tests`, gated list `81 tests` all pass.
 
 ### P1 - Auth And Identity
 
@@ -145,6 +150,8 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
   Evidence: Google PKCE S256 plus nonce/id-token validation; Facebook documented PKCE plain challenge plus no auto-verified email trust; sealed provider+state flow cookies; link session/user binding; account-linking provider/email/P2002 conflict tests; focused and full LAN E2E pass.
 - [ ] Enable real-provider staging for Google/Facebook.
   Evidence required: Google and Meta app configuration, redirect URI validation, secrets in staging, `USE_MOCK_OAUTH=false`, real-provider smoke tests, and support runbook for provider/app-review failure modes.
+- [x] Add gated real-provider staging smoke definition.
+  Evidence: `PW_STAGING_REAL_AUTH=1` exposes project `staging-real-auth`; it asserts Google redirects to `accounts.google.com`, Facebook redirects to `facebook.com`, and forgot-password drains `authEmail` without failures.
 
 ### P1 - Payments
 
@@ -182,20 +189,20 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ## Recommended Next Technical Meta
 
-`PROD-3D-REAL-PROVIDER-SECRETS-STAGING`
+`PROD-3E-STAGING-OVERLAY-AND-SECRET-CONTRACT`
 
-Objective: move from LAN auth-email/OAuth groundwork to a real staging auth posture without exposing production traffic.
+Objective: scaffold a separate LibrePlay staging environment contract without exposing production traffic or breaking the validated LAN demo.
 
 Success criteria:
 
-- [ ] Google OAuth app/consent and redirect URIs are configured for staging; secrets exist only in secret manager/GitOps secret path.
-- [ ] Meta/Facebook Login app is configured for staging; required permissions/app-review posture is documented; secrets exist only in secret manager/GitOps secret path.
-- [ ] `USE_MOCK_OAUTH=false` staging deployment starts cleanly with real provider secrets and fails closed if any required secret is missing.
-- [ ] Production-grade SMTP/transactional email provider is configured in staging with queue/retry/dead-letter and observability.
-- [ ] Staging smoke covers Google login, Facebook login, email verification delivery, password reset delivery, negative provider failures and session/account-linking regressions.
+- [ ] GitOps has a staging overlay or documented app scaffold that does not mutate the live LAN demo.
+- [ ] Staging secret contract points to a separate Vault path and marks Google/Facebook/OAuth/SMTP keys mandatory for staging.
+- [ ] `scripts/check-libreplay-staging-contract.sh libreplay-staging` validates key names and staging config without printing values once the namespace exists.
+- [ ] Staging cannot report green while `USE_MOCK_OAUTH=true`, `AUTH_EMAIL_PROVIDER=console`, `.local` mail sender, or LAN-only URLs are configured.
+- [ ] Root Argo app creation is either blocked until secrets exist or explicitly manual/no-autosync with documented failure mode.
 - [ ] Source CI, dependency audit, GitOps dry-run, Argo, health checks and full LAN E2E remain green.
 
-Rationale: PROD-3C closed the implementable auth-email queue and fail-closed guardrail work in LAN. The remaining blocker is operational: real provider apps, Vault/GitOps secret material, staging deployment mode, real SMTP delivery and staging smoke evidence.
+Rationale: PROD-3D closed the source-side guardrail/smoke/runbook work that can be done without external secrets. The remaining implementable work is GitOps structure for a separate staging contract; full real-provider validation remains blocked until Google, Meta and SMTP credentials exist.
 
 ## External Policy Notes
 
