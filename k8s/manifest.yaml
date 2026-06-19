@@ -44,6 +44,7 @@ metadata:
   namespace: libreplay
 data:
   NODE_ENV: production
+  DEPLOYMENT_MODE: lan-demo
   APP_BASE_URL: https://libreplay.lan.e-dani.com
   AUTH_URL: https://libreplay.lan.e-dani.com
   AUTH_TRUST_HOST: "true"

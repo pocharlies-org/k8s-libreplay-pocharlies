@@ -1,7 +1,7 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-READY`
-Last updated: 2026-06-19 12:36 Europe/Madrid
+Last updated: 2026-06-19 13:00 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 ## Directives
@@ -11,6 +11,7 @@ Target: `https://libreplay.lan.e-dani.com`
 - [x] Sin passwords para usuarios/QA. Evidence: source commit `986ceec2b562...` uses `/api/auth/demo-login`; Playwright no longer references `SEED_AI_USER_PASSWORD` or `E2E_TEST_PASSWORD`.
 - [x] Secrets internos siguen en secrets. Evidence: manifest reads `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, MinIO, Meili and `SEED_USER_PASSWORD` from `libreplay-secrets`.
 - [x] Mocks visibles como LAN/no-prod. Evidence: ConfigMap enables mock flags; UI has demo/no-prod panel and creator/payment mock copy.
+- [x] LAN demo cannot be mistaken for production mode. Evidence: GitOps ConfigMap declares `DEPLOYMENT_MODE=lan-demo`; source env parser rejects `ENABLE_LAN_DEMO_LOGIN` outside `lan-demo` and rejects all critical mocks in `DEPLOYMENT_MODE=production`.
 - [x] No cerrar con pods caidos, 404s, buttons mudos, skips criticos or missing secrets. Evidence: Argo `Synced/Healthy`, pods/endpoints ready, `libreplay-secrets` key contract present, Playwright LAN `73 passed`, `skipped=0`, `unexpected=0`, `flaky=0`.
 
 ## Acceptance Criteria
@@ -28,6 +29,7 @@ Target: `https://libreplay.lan.e-dani.com`
 - [x] LAN demo source committed. Evidence: `/home/dibanez/k8s/libreplay` commits through `2365959 fix: make LAN demo e2e repeatable` pushed to `origin/main`.
 - [x] Source canonical repo is in the ARC-backed org. Evidence: `origin` for `/home/dibanez/k8s/libreplay` is `git@github.com:pocharlies-org/libreplay.git`; previous personal repo remains as remote `personal` for traceability.
 - [x] Source CI runs on ARC `arc-k8s` and is green. Evidence: `pocharlies-org/libreplay` run `27820394287` completed successfully on 2026-06-19; job `verify` passed `checkout`, `pnpm/action-setup`, `setup-node`, `pnpm install --frozen-lockfile`, Prisma generate, typecheck, unit tests, web build and Docker build smoke in `5m45s`.
+- [x] Production safety env guardrails have unit/CI coverage. Evidence: source commit `61c6dff feat(config): add deployment mode guardrails`; tests cover `DEPLOYMENT_MODE=lan-demo`, production mock rejection, demo-login rejection outside LAN demo and strict string boolean parsing; local `pnpm test`, `pnpm typecheck`, `pnpm --filter @libreplay/web build` passed; `pocharlies-org/libreplay` CI run `27821491050` passed `typecheck`, unit tests, web build and Docker build smoke in `4m59s`.
 - [x] `pnpm install --frozen-lockfile`. Evidence: exited 0; lockfile up to date and already up to date.
 - [x] `pnpm typecheck`. Evidence: exited 0 on 2026-06-19.
 - [x] `pnpm test`. Evidence: exited 0; config 4 tests, security 7 tests, auth no-tests pass, web 8 tests.
