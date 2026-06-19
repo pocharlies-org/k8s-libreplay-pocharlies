@@ -7,6 +7,16 @@ Target: `https://libreplay.lan.e-dani.com`
 Current production overlay: `NOT-PRODUCTION-READY`.
 Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated staging real-provider smokes and staging auth runbook are now green, but production is still blocked by real-provider secrets, real SMTP delivery in staging/prod, production video renditions/HLS, payments, DevOps/DR, compliance and observability gaps.
 
+## 2026-06-19 PMO Iteration - Static Staging Secret Contract
+
+- [x] Static staging contract exists outside the live Argo path. Evidence: `staging/libreplay-staging-contract.yaml` defines only `Namespace/libreplay-staging`, `ExternalSecret/libreplay-secrets` and `ConfigMap/libreplay-config`; it does not define workloads, services, ingress or Argo app.
+- [x] Staging secret path is separated from LAN. Evidence: every `remoteRef` points to `secret/libreplay/staging`, not `secret/libreplay`.
+- [x] Real auth provider key names are mandatory in the static contract. Evidence: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`, `OAUTH_TOKEN_ENC_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` are explicit `ExternalSecret.spec.data[*].secretKey` entries.
+- [x] Staging config is real auth/email posture. Evidence: ConfigMap has `DEPLOYMENT_MODE=staging`, `NODE_ENV=production`, `USE_MOCK_OAUTH=false`, `AUTH_EMAIL_PROVIDER=smtp`, HTTPS `APP_BASE_URL`/`AUTH_URL`, non-local `MAIL_FROM`, and `ENABLE_LAN_DEMO_LOGIN=false`.
+- [x] Static contract validates without applying. Evidence: `kubectl apply --dry-run=client -f staging/libreplay-staging-contract.yaml` returned Namespace, ExternalSecret and ConfigMap dry-run create messages.
+- [blocked] Server-side staging validation and live Argo app remain blocked. Evidence: `kubectl apply --server-side --dry-run=server -f staging/libreplay-staging-contract.yaml` cannot validate namespaced resources until `libreplay-staging` exists; no live `libreplay-staging` namespace/app/ExternalSecret exists yet.
+- [blocked] Real-provider staging remains blocked. Evidence: static contract contains key names only; actual Google, Facebook, OAuth encryption and SMTP values are still absent from the live runtime.
+
 ## 2026-06-19 PMO Iteration - Real Provider Staging Gate Scaffold
 
 - [x] Source real-provider staging gate patch committed and pushed. Evidence: source commit `31b26c3 test(auth): add real provider staging gates`.

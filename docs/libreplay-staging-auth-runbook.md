@@ -28,6 +28,9 @@ a separate staging environment before production can be considered.
   Evidence required: `kubectl -n argocd get application libreplay-staging`.
 - [ ] Namespace `libreplay-staging` exists with its own `ExternalSecret`.
   Evidence required: `kubectl -n libreplay-staging get externalsecret`.
+- [x] Static staging auth contract exists without enabling live staging.
+  Evidence: `staging/libreplay-staging-contract.yaml` contains only Namespace,
+  `ExternalSecret` and `ConfigMap`; it does not define workloads or ingress.
 - [ ] Vault/ExternalSecret exposes the required key names without printing
   values. Evidence required:
   `scripts/check-libreplay-staging-contract.sh libreplay-staging`.
@@ -74,6 +77,16 @@ Run these only after the staging namespace/app and ExternalSecret exist:
 scripts/check-libreplay-staging-contract.sh libreplay-staging
 ```
 
+Validate the static contract without applying it:
+
+```bash
+kubectl apply --dry-run=client -f staging/libreplay-staging-contract.yaml
+```
+
+Use server-side dry-run only after `libreplay-staging` exists in the live
+cluster; otherwise the server rejects namespaced resources because the dry-run
+Namespace is not persisted.
+
 Run the gated real-provider smoke from the source repo:
 
 ```bash
@@ -94,6 +107,8 @@ strictly skip-free.
 - No live Argo app named `libreplay-staging`.
 - No live namespace named `libreplay-staging`.
 - No live `ExternalSecret/libreplay-secrets` for staging.
+- Static contract exists at `staging/libreplay-staging-contract.yaml`, but it
+  is intentionally not wired into Argo yet.
 - Current `libreplay-secrets` in namespace `libreplay` lacks Google, Facebook,
   OAuth encryption and SMTP provider keys.
 - No Google/Meta staging callback smoke has been run.

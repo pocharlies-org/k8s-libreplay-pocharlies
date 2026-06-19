@@ -1,0 +1,98 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: libreplay-staging
+  labels:
+    app.kubernetes.io/name: libreplay
+    app.kubernetes.io/part-of: libreplay
+    libreplay.e-dani.com/environment: staging
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: libreplay-secrets
+  namespace: libreplay-staging
+  labels:
+    app.kubernetes.io/name: libreplay
+    libreplay.e-dani.com/environment: staging
+spec:
+  refreshInterval: 1h
+  secretStoreRef: { name: vault-backend, kind: ClusterSecretStore }
+  target:
+    name: libreplay-secrets
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  data:
+    - secretKey: DATABASE_URL
+      remoteRef: { key: secret/libreplay/staging, property: DATABASE_URL }
+    - secretKey: REDIS_URL
+      remoteRef: { key: secret/libreplay/staging, property: REDIS_URL }
+    - secretKey: AUTH_SECRET
+      remoteRef: { key: secret/libreplay/staging, property: AUTH_SECRET }
+    - secretKey: MINIO_ACCESS_KEY
+      remoteRef: { key: secret/libreplay/staging, property: MINIO_ACCESS_KEY }
+    - secretKey: MINIO_SECRET_KEY
+      remoteRef: { key: secret/libreplay/staging, property: MINIO_SECRET_KEY }
+    - secretKey: MEILISEARCH_API_KEY
+      remoteRef: { key: secret/libreplay/staging, property: MEILISEARCH_API_KEY }
+    - secretKey: DB_USER
+      remoteRef: { key: secret/libreplay/staging, property: DB_USER }
+    - secretKey: DB_PASSWORD
+      remoteRef: { key: secret/libreplay/staging, property: DB_PASSWORD }
+    - secretKey: SEED_USER_PASSWORD
+      remoteRef: { key: secret/libreplay/staging, property: SEED_USER_PASSWORD }
+    - secretKey: GOOGLE_CLIENT_ID
+      remoteRef: { key: secret/libreplay/staging, property: GOOGLE_CLIENT_ID }
+    - secretKey: GOOGLE_CLIENT_SECRET
+      remoteRef: { key: secret/libreplay/staging, property: GOOGLE_CLIENT_SECRET }
+    - secretKey: FACEBOOK_CLIENT_ID
+      remoteRef: { key: secret/libreplay/staging, property: FACEBOOK_CLIENT_ID }
+    - secretKey: FACEBOOK_CLIENT_SECRET
+      remoteRef: { key: secret/libreplay/staging, property: FACEBOOK_CLIENT_SECRET }
+    - secretKey: OAUTH_TOKEN_ENC_KEY
+      remoteRef: { key: secret/libreplay/staging, property: OAUTH_TOKEN_ENC_KEY }
+    - secretKey: SMTP_HOST
+      remoteRef: { key: secret/libreplay/staging, property: SMTP_HOST }
+    - secretKey: SMTP_PORT
+      remoteRef: { key: secret/libreplay/staging, property: SMTP_PORT }
+    - secretKey: SMTP_USER
+      remoteRef: { key: secret/libreplay/staging, property: SMTP_USER }
+    - secretKey: SMTP_PASSWORD
+      remoteRef: { key: secret/libreplay/staging, property: SMTP_PASSWORD }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: libreplay-config
+  namespace: libreplay-staging
+  labels:
+    app.kubernetes.io/name: libreplay
+    libreplay.e-dani.com/environment: staging
+data:
+  NODE_ENV: production
+  DEPLOYMENT_MODE: staging
+  APP_BASE_URL: https://staging.libreplay.example.com
+  AUTH_URL: https://staging.libreplay.example.com
+  AUTH_TRUST_HOST: "true"
+  DEFAULT_LOCALE: es
+  SUPPORTED_LOCALES: es,en,fr,de,pt
+  RATE_LIMIT_DISABLED: "false"
+  AUTH_EMAIL_PROVIDER: smtp
+  MAIL_FROM: LibrePlay <noreply@libreplay.example.com>
+  SMTP_SECURE: "true"
+  ENABLE_LAN_DEMO_LOGIN: "false"
+  LAN_DEMO_ALLOWED_HOSTS: ""
+  LAN_DEMO_ALLOWED_CIDRS: ""
+  USE_MOCK_OAUTH: "false"
+  ENABLE_MOCK_PAYMENTS: "true"
+  ENABLE_MOCK_AGE_VERIFICATION: "true"
+  ENABLE_MOCK_FACE_LIVENESS: "true"
+  ENABLE_MOCK_CSAM_SCANNER: "true"
+  ENABLE_MOCK_MEDIA_MODERATION: "true"
+  ENABLE_MOCK_LLM: "true"
+  MINIO_ENDPOINT: http://libreplay-minio.libreplay-staging.svc.cluster.local:9000
+  MINIO_BUCKET: libreplay-media-staging
+  MINIO_REGION: us-east-1
+  MINIO_PUBLIC_URL: http://libreplay-minio.libreplay-staging.svc.cluster.local:9000
+  MEILISEARCH_HOST: http://libreplay-meilisearch.libreplay-staging.svc.cluster.local:7700

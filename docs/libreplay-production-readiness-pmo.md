@@ -8,7 +8,7 @@ Target today: `https://libreplay.lan.e-dani.com`
 
 LibrePlay is a validated LAN demo, not a production-ready social network.
 
-PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated real-provider Playwright smoke and staging auth runbook are now fixed, but the app still lacks real OAuth provider runtime/secrets, production payments, real identity/age verification providers, real CSAM/media moderation, real SMTP provider delivery in staging/prod, production video renditions/HLS, complete mobile validation, production observability, DR rehearsal and legal/compliance sign-off.
+PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated real-provider Playwright smoke, staging auth runbook and static staging secret contract are now fixed, but the app still lacks real OAuth provider runtime/secrets, production payments, real identity/age verification providers, real CSAM/media moderation, real SMTP provider delivery in staging/prod, production video renditions/HLS, complete mobile validation, production observability, DR rehearsal and legal/compliance sign-off.
 
 ## RHO Task Checklist
 
@@ -30,6 +30,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Production security dependency baseline is clean for known npm advisories. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found` after upgrading Next to `15.5.19`, `next-intl` to `4.13.0` and adding transitives overrides.
 - [x] Auth email queue is deployed and drains. Evidence: `/api/health/deps` reports `authEmail` waiting/active/delayed/failed all `0`; worker logs show `[auth-email:password_reset] queued console delivery to=demo-member@libreplay.local` and `auth-email completed 2 password_reset` with no URL or token.
 - [x] Staging can no longer pass with mock OAuth enabled at app-config level. Evidence: source commit `31b26c3`; `DEPLOYMENT_MODE=staging` requires `USE_MOCK_OAUTH=false`, Google/Facebook secrets and `OAUTH_TOKEN_ENC_KEY`.
+- [x] Static staging secret contract exists. Evidence: `staging/libreplay-staging-contract.yaml` defines only Namespace, ExternalSecret and ConfigMap for `libreplay-staging`, references `secret/libreplay/staging`, and validates with `kubectl apply --dry-run=client`.
 
 ## Specialist Assessment
 
@@ -189,20 +190,20 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ## Recommended Next Technical Meta
 
-`PROD-3E-STAGING-OVERLAY-AND-SECRET-CONTRACT`
+`PROD-3F-LIVE-STAGING-ARGO-APP`
 
-Objective: scaffold a separate LibrePlay staging environment contract without exposing production traffic or breaking the validated LAN demo.
+Objective: create a live but controlled `libreplay-staging` Argo path only after deciding how to handle missing real provider secrets.
 
 Success criteria:
 
-- [ ] GitOps has a staging overlay or documented app scaffold that does not mutate the live LAN demo.
-- [ ] Staging secret contract points to a separate Vault path and marks Google/Facebook/OAuth/SMTP keys mandatory for staging.
-- [ ] `scripts/check-libreplay-staging-contract.sh libreplay-staging` validates key names and staging config without printing values once the namespace exists.
-- [ ] Staging cannot report green while `USE_MOCK_OAUTH=true`, `AUTH_EMAIL_PROVIDER=console`, `.local` mail sender, or LAN-only URLs are configured.
-- [ ] Root Argo app creation is either blocked until secrets exist or explicitly manual/no-autosync with documented failure mode.
-- [ ] Source CI, dependency audit, GitOps dry-run, Argo, health checks and full LAN E2E remain green.
+- [ ] Decision recorded: do not create live app until secrets exist, or create manual/no-autosync app with expected Degraded status.
+- [ ] If secrets exist, `libreplay-staging` namespace and ExternalSecret reconcile from `secret/libreplay/staging`.
+- [ ] `scripts/check-libreplay-staging-contract.sh libreplay-staging` passes without printing values.
+- [ ] Staging Argo app points to a staging path and cannot mutate LAN PVCs, DB, MinIO bucket or hostname.
+- [ ] Real-provider Playwright smoke runs with `PW_STAGING_REAL_AUTH=1`.
+- [ ] LAN app remains `Synced/Healthy` and full LAN E2E remains green.
 
-Rationale: PROD-3D closed the source-side guardrail/smoke/runbook work that can be done without external secrets. The remaining implementable work is GitOps structure for a separate staging contract; full real-provider validation remains blocked until Google, Meta and SMTP credentials exist.
+Rationale: PROD-3E created the static staging secret/config contract without applying workloads. The next step is intentionally blocked by operational choice and secret availability: either populate staging secrets first, or accept a controlled manual Argo app that will be unhealthy until secrets exist.
 
 ## External Policy Notes
 
