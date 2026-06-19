@@ -1,14 +1,14 @@
 # LibrePlay Production Readiness PMO
 
 Status: `NOT-PRODUCTION-READY`
-Last updated: 2026-06-20 00:45 Europe/Madrid
+Last updated: 2026-06-20 01:28 Europe/Madrid
 Target today: `https://libreplay.lan.e-dani.com`
 
 ## Executive Position
 
 LibrePlay is a validated LAN demo, not a production-ready social network.
 
-PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork, video MP4/HLS rendition MVP, payment fail-closed/provider selection, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated real-provider Playwright smoke, staging auth runbook, static staging secret contract, pending social-email completion, authenticated mobile core coverage and the mobile Discover responsive fix are now fixed, but the app still lacks real OAuth provider runtime/secrets, production payments through an approved adult-friendly PSP, real identity/age verification providers, real CSAM/media moderation, real SMTP provider delivery in staging/prod, full production media delivery/lifecycle/CDN controls, full mobile product matrix validation, production observability, DR rehearsal and legal/compliance sign-off.
+PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork, video MP4/HLS rendition MVP, payment fail-closed/provider selection, site-wide API mutation origin gate, P0 dates/posts BOLA fixes, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated real-provider Playwright smoke, staging auth runbook, static staging secret contract, pending social-email completion, authenticated mobile core coverage and the mobile Discover responsive fix are now fixed, but the app still lacks real OAuth provider runtime/secrets, production payments through an approved adult-friendly PSP, real identity/age verification providers, real CSAM/media moderation, real SMTP provider delivery in staging/prod, full production media delivery/lifecycle/CDN controls, full mobile product matrix validation, production observability, DR rehearsal and legal/compliance sign-off.
 
 ## RHO Task Checklist
 
@@ -21,12 +21,12 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ### Current Acceptance Evidence
 
-- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `d2438a0 fix(payments): fail closed mock provider`.
-- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; current runtime manifest commit `a8dbe19 fix: deploy libreplay payment fail closed` is pushed.
-- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy` at `a8dbe190e6396f03efc3bcd00f8c6dff25dbaa8d`; runtime web image `sha-d2438a0ff2cb@sha256:f11312ad087fe409ca14e26fc7029f25e177c951db18d8d619cb9047f5a83f13`, worker image `worker-sha-d2438a0ff2cb@sha256:aa0284ebe199dde396c0a13da03268b32aaa127341b29b0a62000888696e5730`.
+- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `c3ca34b fix(security): gate api mutations and visibility`.
+- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; current runtime manifest commit `1bc61b9 fix: deploy libreplay security mutation gate` is pushed.
+- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy` at `1bc61b960643ce2fb8d37c3be2626e80ab857329`; runtime web image `sha-c3ca34b73c57@sha256:fa19e023ba2d11ea3cd4fc0572b5661f61b531ed8656360eccf07425b898cd13`, worker image `worker-sha-c3ca34b73c57@sha256:b23bd33f5a862e006f3ed9fa5c66672272c922870d605b0f3bb70165e6c32378`.
 - [x] LAN demo guardrail is active. Evidence: pod env has `DEPLOYMENT_MODE=lan-demo`, `NODE_ENV=production`, `ENABLE_LAN_DEMO_LOGIN=true`, `PAYMENT_PROVIDER=mock`, `ENABLE_MOCK_PAYMENTS=true`, `ENABLE_MOCK_LLM=true`.
 - [x] Authenticated mobile core coverage exists and passes. Evidence: mobile Playwright project has `11 tests in 2 files`; final LAN mobile run returned `11 passed (10.0s)`, covering auth layout, OAuth buttons, forgot/reset/verify/social-email, bottom nav, feed publish/report, Discover filters/message, messages send, settings/security and map.
-- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 pnpm --filter @libreplay/web exec playwright test --reporter=line` -> `90 passed (1.4m)`.
+- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 pnpm --filter @libreplay/web exec playwright test --reporter=line` -> `90 passed (1.5m)`.
 - [x] Production security dependency baseline is clean for known npm advisories. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found` after upgrading Next to `15.5.19`, `next-intl` to `4.13.0` and adding transitives overrides.
 - [x] Auth email queue is deployed and drains. Evidence: `/api/health/deps` reports `authEmail` waiting/active/delayed/failed all `0`; worker logs show `[auth-email:password_reset] queued console delivery to=demo-member@libreplay.local` and `auth-email completed 2 password_reset` with no URL or token.
 - [x] Staging can no longer pass with mock OAuth enabled at app-config level. Evidence: source commit `31b26c3`; `DEPLOYMENT_MODE=staging` requires `USE_MOCK_OAUTH=false`, Google/Facebook secrets and `OAUTH_TOKEN_ENC_KEY`.
@@ -35,6 +35,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Mobile Discover responsive bug is fixed. Evidence: first LAN mobile run on authenticated mobile coverage found the filters panel pushed `Mensaje` outside the iPhone viewport; source `8d64302` stacks Discover filters on mobile and final LAN mobile/full E2E passed.
 - [x] Video MP4/HLS rendition MVP is deployed and validated. Evidence: source commit `2a04229`, migration `20260619212500_video_renditions`, Release Image run `27849982311`, GitOps commits `6437736` and `32ad2dc`, focused LAN media E2E `5 passed (7.2s)`, latest DB video asset `cmqlh6b4m000d4ozyuwcxz4ry` has `THUMB_LARGE`, `VIDEO_MP4_480P` and `VIDEO_HLS_480P`, and full LAN E2E returned `90 passed (1.5m)`.
 - [x] Payment fail-closed/provider selection is deployed and validated. Evidence: source commit `d2438a0`, source CI run `27851079378`, Release Image run `27851301076`, GitOps commit `a8dbe19`, GitOps CI run `27851552472`, runtime env `PAYMENT_PROVIDER=mock` only under `DEPLOYMENT_MODE=lan-demo`, staging contract `PAYMENT_PROVIDER=disabled` with `ENABLE_MOCK_PAYMENTS=false`, webhook placeholder returns `503 PAYMENT_PROVIDER_NOT_CONFIGURED`, focused payment/media E2E returned `5 passed (7.5s)`, and full LAN E2E returned `90 passed (1.4m)`.
+- [x] Site-wide API mutation origin gate and P0 dates/posts BOLA fixes are deployed and validated. Evidence: source commit `c3ca34b`, source CI run `27852395400`, Release Image run `27852581835`, GitOps commit `1bc61b9`, GitOps CI run `27852814357`, runtime cross-site `POST /api/posts` returns `403 INVALID_ORIGIN`, runtime same-origin unauthenticated POST returns auth redirect `307`, full LAN E2E returned `90 passed (1.5m)`, and web/worker logs have no recent error matches.
 
 ## Specialist Assessment
 
@@ -62,6 +63,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] OAuth protocol and account-linking hardening exists before real-provider staging. Evidence: source commit `c37cdca`; Google uses PKCE S256, nonce and `id_token` issuer/audience/nonce validation; Facebook sends documented plain PKCE and does not auto-verify Graph email; OAuth flow metadata is sealed with AES-GCM, scoped by provider+state and TTL; linking is bound to initiating session/user and handles provider/email conflicts plus P2002 races; auth tests are `20 passed`.
 - [x] Pending OAuth email completion exists. Evidence: source commit `783bb8d`; callback stores token-free pending profiles in a sealed TTL cookie, `/auth/social-email` collects a manual email, `/api/auth/social-email` enforces origin/rate/session/pending-cookie checks, creates social account in a transaction, queues email verification and handles P2002 races as conflicts.
 - [x] Sensitive auth/account mutation routes enforce browser request origin checks. Evidence: central `enforceAuthOrigin` uses Origin, Referer and Fetch Metadata; focused LAN auth E2E is `7 passed` including cross-site rejection for login/forgot/reset/verify/logout/unlink-social; web/security tests cover production fail-closed and LAN compatibility.
+- [x] Site-wide browser-origin gate covers non-auth API mutations. Evidence: source commit `c3ca34b`; middleware matches `/api/:path*`, checks all `POST|PUT|PATCH|DELETE` routes with Origin/Referer/Fetch Metadata, rejects cross-site fetch metadata, and exempts only `/api/payments/webhook`; runtime cross-site `POST /api/posts` returned `403 INVALID_ORIGIN`.
 - [blocked] Real Google/Facebook login is not enabled in LAN/prod. Evidence: ConfigMap still has `USE_MOCK_OAUTH=true`; live secret keys do not include `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET` or `OAUTH_TOKEN_ENC_KEY`.
 - [x] Auth email queue/retry groundwork exists. Evidence: source commit `9670441 feat(auth): queue transactional emails`; `register` and `forgot-password` enqueue `auth-email` jobs, worker processes auth email separately from media, `/api/health/deps` exposes queue counts, and completed jobs are removed immediately.
 - [x] Console auth-email logging is redacted. Evidence: source commit `53a8b48 fix(auth): redact console email action urls`; final worker logs contain recipient and job metadata only, and `rg 'token=|url=|reset-password|verify-email|password-reset|actionUrl'` against recent worker logs found no matches.
@@ -103,6 +105,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Release automation remains complete for video groundwork. Evidence: source `Release Image` workflow run `27836030980` completed `success`; GitOps commit `e576d68` deploys web/worker digests for source `e9a1135`; GitOps CI run `27836441318` completed `success`; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for video renditions/HLS. Evidence: source CI run `27849729670` and Release Image run `27849982311` completed `success`; GitOps commits `6437736` and `32ad2dc` deploy web/worker/tools digests for source `2a04229`; GitOps CI runs `27850274935` and `27850375820` completed `success`; migration job `libreplay-db-migrate-2a04229` completed; Argo is `Synced/Healthy`; full LAN E2E is `90 passed`.
 - [x] Release automation remains complete for payment fail-closed. Evidence: source CI run `27851079378` and corrected Release Image run `27851301076` completed `success`; GitOps commit `a8dbe19` deploys web/worker digests for source `d2438a0`; GitOps CI run `27851552472` completed `success`; Argo is `Synced/Healthy`; runtime health is OK; full LAN E2E is `90 passed`.
+- [x] Release automation remains complete for security mutation gate. Evidence: source CI run `27852395400` and Release Image run `27852581835` completed `success`; GitOps commit `1bc61b9` deploys web/worker digests for source `c3ca34b`; GitOps CI run `27852814357` completed `success`; Argo is `Synced/Healthy`; runtime health is OK; full LAN E2E is `90 passed`.
 - [x] Release automation remains complete for auth email recovery. Evidence: source CI run `27837492921` completed `success`; Release Image run `27837784400` completed `success`; GitOps commit `da4868b` deploys web/worker/tools digests for source `1bbe568`; GitOps CI run `27838078792` completed `success`; migration job `libreplay-db-migrate-1bbe568` completed; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for OAuth/CSRF hardening. Evidence: source CI run `27839801643` completed `success`; Release Image run `27840087320` completed `success`; GitOps commit `a3a6567` deploys web/worker/tools digests for source `c37cdca`; GitOps CI run `27840418461` completed `success`; migration job `libreplay-db-migrate-c37cdca` completed; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for auth email queue/redaction. Evidence: source CI run `27842739635` completed `success`; Release Image run `27843010658` completed `success`; GitOps commit `6ca7ede` deploys web/worker digests for source `53a8b48`; GitOps CI run `27843274783` completed `success`; Argo is `Synced/Healthy`.
@@ -117,9 +120,11 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Dependency security baseline is clean for known npm advisories. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found`.
 - [x] Auth/OAuth CSRF and Origin hardening exists. Evidence: source commit `c37cdca`; sensitive auth/account POST routes call central Origin/Fetch Metadata checks before mutation/rate-limit; production/staging fail closed without trusted Origin/Referer; LAN/dev remains compatible with API clients that omit Origin; focused and full LAN E2E pass.
 - [x] Mock payment mutation routes fail closed outside LAN/test. Evidence: source commit `d2438a0`; staging/prod config rejects mock payments; all six mock purchase routes return `503 PAYMENT_PROVIDER_NOT_CONFIGURED` before session/DB work in staging-disabled tests; PPV purchase now goes through the payment provider facade.
+- [x] Site-wide non-auth API mutation Origin/Fetch Metadata gate exists. Evidence: source commit `c3ca34b`; `docs/security-mutation-inventory.md` records 82 mutating route files and 86 handlers; middleware protects all API mutations except exact `/api/payments/webhook`; source and runtime tests verify cross-site rejection.
+- [x] P0 dates/posts BOLA fixes exist. Evidence: `canViewDateProposal` guards date detail/apply; `canViewPost` guards post detail/react/comments/bookmark/report; `security-idor.test.ts` rejects private date and private post access before write side effects.
 - [blocked] Rate limiting is not production-grade. Evidence: in-process limiter documented as prototype-only; LAN-only rate allowances were added for validation, but production still needs Redis/distributed enforcement.
-- [blocked] Site-wide CSRF/token posture is still incomplete. Evidence: auth/account POST routes now enforce Origin/Fetch Metadata, but a double-submit CSRF token and systematic coverage for every non-auth mutating route are still pending.
-- [ ] BOLA/IDOR security review is complete. Missing: systematic tests for media, albums, conversations, reports, admin actions and creator purchases.
+- [blocked] Double-submit CSRF/token posture is still incomplete. Evidence: site-wide Origin/Fetch Metadata is deployed, but browser double-submit token rollout and shared client API wrapper remain pending.
+- [blocked] BOLA/IDOR security review is not complete. Evidence: P0 dates/posts are fixed and focused tests cover six high-risk domains, but events/groups, paid-content `postId` ownership, blog club attribution, creator purchases/subscriptions and album grant coverage remain open.
 - [ ] Secrets/compliance posture is complete. Missing: production OAuth/payment secrets, secret rotation, least privilege S3 credentials, signed URL policy, audit of optional secret behavior.
 
 ## P0/P1 Backlog
@@ -148,6 +153,8 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
   Evidence: source commit `31b26c3` adds staging fail-closed env policy, config/auth/web tests, gated Playwright `staging-real-auth` project, `40-real-auth.staging.spec.ts`, and E2E docs; local gates `pnpm test`, `pnpm typecheck`, `pnpm --filter @libreplay/web build`, `pnpm audit --prod`, default Playwright list `79 tests`, gated list `81 tests` all pass.
 - [x] Add payment fail-closed/provider selection.
   Evidence: source commit `d2438a0`, source CI run `27851079378`, Release Image run `27851301076`, GitOps commit `a8dbe19`, GitOps CI run `27851552472`, staging contract disables mock payments, LAN runtime keeps `PAYMENT_PROVIDER=mock` only under `DEPLOYMENT_MODE=lan-demo`, webhook placeholder returns `503`, focused payment/media E2E is `5 passed`, and full LAN E2E is `90 passed`.
+- [x] Add site-wide API mutation Origin/Fetch Metadata gate and first P0 BOLA fixes.
+  Evidence: source commit `c3ca34b`, source CI run `27852395400`, Release Image run `27852581835`, GitOps commit `1bc61b9`, GitOps CI run `27852814357`, runtime cross-site mutation smoke returns `403`, runtime webhook placeholder returns `503`, Argo is `Synced/Healthy`, and full LAN E2E is `90 passed`.
 
 ### P1 - Auth And Identity
 
@@ -208,20 +215,21 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ## Recommended Next Technical Meta
 
-`PROD-7A-SITE-WIDE-CSRF-IDOR-MUTATION-GATE`
+`PROD-7B-REMAINING-BOLA-VISIBILITY-OWNERSHIP-GATE`
 
-Objective: systematically audit and harden every non-auth mutating API route for CSRF/origin posture, authorization/BOLA controls, and negative tests before expanding real users or payment providers.
+Objective: close the remaining concrete BOLA/IDOR gaps discovered during PROD-7A before expanding real users, content inventory or monetization.
 
 Success criteria:
 
-- [ ] Generate a current inventory of all mutating `POST|PUT|PATCH|DELETE` route handlers and classify each by public/authenticated/admin/webhook/internal/demo scope.
-- [ ] Add or enforce a reusable browser-origin/CSRF guard for browser-originated non-auth mutations without breaking same-origin LAN E2E or webhook/internal exceptions.
-- [ ] Add focused negative tests for high-risk IDOR/BOLA surfaces: media variants/uploads, conversations/messages, creator purchases/subscriptions, reports/moderation, groups/clubs/events/dates and admin actions.
-- [ ] Confirm payment webhook and future provider routes are explicitly exempted only by signed-provider verification placeholder/contract, not by broad CSRF bypass.
-- [ ] Run unit/API tests, typecheck, web build, audit, lint, source CI, release, GitOps deploy and full LAN E2E after changes.
-- [ ] Update this PMO audit with route inventory, specialist checklists, residual risks and the next meta.
+- [ ] Events detail, RSVP, review and purchase paths reject draft/cancelled/private or otherwise non-viewable event IDs before side effects.
+- [ ] Groups detail and join/leave paths reject non-public/non-viewable groups before membership side effects.
+- [ ] Creator paid-content creation verifies referenced `postId` belongs to the creator/session or rejects it.
+- [ ] Blog submission verifies `clubProfileId` belongs to or is manageable by the submitting user before attribution.
+- [ ] Focused negative unit/API tests cover each fixed BOLA path and assert no write side effects occur.
+- [ ] Source gates, CI, release, GitOps deploy, runtime smokes and full LAN E2E remain green.
+- [ ] PMO docs record residual BOLA/security risks and the next meta.
 
-Rationale: real Google/Facebook/SMTP/PSP provider staging is still blocked by external secrets and approvals, while route-level CSRF/BOLA hardening is executable now and reduces the largest security risk for a social app before real users, uploads and monetization scale.
+Rationale: PROD-7A closed the site-wide Origin gate plus P0 dates/posts BOLA. The remaining BOLA findings are source-executable, high-leverage, and do not depend on external OAuth/SMTP/PSP secrets.
 
 ## External Policy Notes
 
