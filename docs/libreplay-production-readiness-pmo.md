@@ -1,14 +1,14 @@
 # LibrePlay Production Readiness PMO
 
 Status: `NOT-PRODUCTION-READY`
-Last updated: 2026-06-19 21:32 Europe/Madrid
+Last updated: 2026-06-19 22:26 Europe/Madrid
 Target today: `https://libreplay.lan.e-dani.com`
 
 ## Executive Position
 
 LibrePlay is a validated LAN demo, not a production-ready social network.
 
-PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated real-provider Playwright smoke, staging auth runbook and static staging secret contract are now fixed, but the app still lacks real OAuth provider runtime/secrets, production payments, real identity/age verification providers, real CSAM/media moderation, real SMTP provider delivery in staging/prod, production video renditions/HLS, complete mobile validation, production observability, DR rehearsal and legal/compliance sign-off.
+PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated real-provider Playwright smoke, staging auth runbook, static staging secret contract, pending social-email completion and expanded mobile auth smoke are now fixed, but the app still lacks real OAuth provider runtime/secrets, production payments, real identity/age verification providers, real CSAM/media moderation, real SMTP provider delivery in staging/prod, production video renditions/HLS, complete mobile validation, production observability, DR rehearsal and legal/compliance sign-off.
 
 ## RHO Task Checklist
 
@@ -21,16 +21,17 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ### Current Acceptance Evidence
 
-- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `53a8b48 fix(auth): redact console email action urls`.
-- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; staging-auth-gates manifest commit `1b8ff18` is pushed.
-- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy` at `1b8ff18e7e29752982c6e7e20c6bf719005a58b0`; runtime web image `sha-31b26c35eee0@sha256:b1c2ab433f9aa85d895b48e770809876d8efda6d54264ac61f75f0e073ee3529`, worker image `worker-sha-31b26c35eee0@sha256:a329d595cbaf608b183ea2deea7e187c6d7ef5c5f0b8d2809b389fd60d75354b`.
+- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `783bb8d feat(auth): complete pending social email flow`.
+- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; pending-social manifest commit `40c2faa` is pushed.
+- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy` at `40c2faaec74aaf01e84c7cfdf63a84098e9c0b37`; runtime web image `sha-783bb8da7338@sha256:95e6e4614879e40ff0d03552453a5c66f3ad7abba345b96afe7fdc1a6463ed55`, worker image `worker-sha-783bb8da7338@sha256:ffdd4cf9c6679ab69f7d3dae9d7103038e0a0f0c7cc626bea52fdd5dd24da979`.
 - [x] LAN demo guardrail is active. Evidence: pod env has `DEPLOYMENT_MODE=lan-demo`, `NODE_ENV=production`, `ENABLE_LAN_DEMO_LOGIN=true`, `ENABLE_MOCK_PAYMENTS=true`, `ENABLE_MOCK_LLM=true`.
-- [x] Mobile smoke exists and passes. Evidence: full Playwright run includes mobile project tests `77-79` passing.
-- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 npx playwright test --reporter=line` from `apps/web` -> `79 passed (1.3m)`.
+- [x] Mobile auth smoke exists and passes. Evidence: full Playwright run includes mobile project tests `80-84`, covering auth layout, OAuth buttons, forgot/reset/verify/social-email routes and landing CTA.
+- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 pnpm --filter @libreplay/web exec playwright test --reporter=line` -> `84 passed (1.4m)`.
 - [x] Production security dependency baseline is clean for known npm advisories. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found` after upgrading Next to `15.5.19`, `next-intl` to `4.13.0` and adding transitives overrides.
 - [x] Auth email queue is deployed and drains. Evidence: `/api/health/deps` reports `authEmail` waiting/active/delayed/failed all `0`; worker logs show `[auth-email:password_reset] queued console delivery to=demo-member@libreplay.local` and `auth-email completed 2 password_reset` with no URL or token.
 - [x] Staging can no longer pass with mock OAuth enabled at app-config level. Evidence: source commit `31b26c3`; `DEPLOYMENT_MODE=staging` requires `USE_MOCK_OAUTH=false`, Google/Facebook secrets and `OAUTH_TOKEN_ENC_KEY`.
 - [x] Static staging secret contract exists. Evidence: `staging/libreplay-staging-contract.yaml` defines only Namespace, ExternalSecret and ConfigMap for `libreplay-staging`, references `secret/libreplay/staging`, and validates with `kubectl apply --dry-run=client`.
+- [x] Pending OAuth email flow no longer dead-ends. Evidence: `/[locale]/auth/social-email` and `POST /api/auth/social-email` exist; pending social cookie is AES-GCM sealed, token-free and TTL-bound; manual email completion queues verification email and full LAN E2E is green.
 
 ## Specialist Assessment
 
@@ -43,8 +44,8 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ### Frontend / Mobile
 
-- [x] Mobile smoke for auth shell passes. Evidence: mobile Playwright project, iPhone-like viewport, 3 tests passing.
-- [blocked] Mobile coverage is insufficient. Evidence: only `13-verify-mobile.mobile.spec.ts` is mobile-specific; it does not cover authenticated social flows.
+- [x] Mobile smoke for auth shell/auth recovery passes. Evidence: mobile Playwright project, iPhone-like viewport, 5 tests passing for auth layout, OAuth button tap targets, forgot/reset/verify/social-email routes and landing CTA.
+- [blocked] Mobile coverage is insufficient. Evidence: only `13-verify-mobile.mobile.spec.ts` is mobile-specific; it still does not cover authenticated feed, discover, messaging, upload, verification, payments or moderation flows.
 - [ ] PWA/mobile app readiness exists. Missing: installability, safe-area handling, touch gestures for swipe, file capture from camera, mobile upload progress, offline/error states, Android/iOS cross-browser validation.
 - [ ] Accessibility baseline is complete. Missing: automated a11y checks, keyboard flows, screen-reader labels for custom controls, contrast audit across dark UI.
 
@@ -54,6 +55,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Email verification/password reset groundwork exists. Evidence: source commit `1bbe568`; DB has `EmailVerificationToken` and `PasswordResetToken`; forgot/reset/verify/register routes are wired; forgot-password remains non-enumerating; auth package tests cover token hashing/expiry and email provider posture; focused auth E2E is `6 passed`.
 - [x] OAuth mock/token guardrails improved. Evidence: mock OAuth providers are limited to test/development/LAN demo; staging/production missing credentials return provider disabled; OAuth token encryption fails closed in staging/production without `OAUTH_TOKEN_ENC_KEY`; pending-social cookie does not store provider tokens.
 - [x] OAuth protocol and account-linking hardening exists before real-provider staging. Evidence: source commit `c37cdca`; Google uses PKCE S256, nonce and `id_token` issuer/audience/nonce validation; Facebook sends documented plain PKCE and does not auto-verify Graph email; OAuth flow metadata is sealed with AES-GCM, scoped by provider+state and TTL; linking is bound to initiating session/user and handles provider/email conflicts plus P2002 races; auth tests are `20 passed`.
+- [x] Pending OAuth email completion exists. Evidence: source commit `783bb8d`; callback stores token-free pending profiles in a sealed TTL cookie, `/auth/social-email` collects a manual email, `/api/auth/social-email` enforces origin/rate/session/pending-cookie checks, creates social account in a transaction, queues email verification and handles P2002 races as conflicts.
 - [x] Sensitive auth/account mutation routes enforce browser request origin checks. Evidence: central `enforceAuthOrigin` uses Origin, Referer and Fetch Metadata; focused LAN auth E2E is `7 passed` including cross-site rejection for login/forgot/reset/verify/logout/unlink-social; web/security tests cover production fail-closed and LAN compatibility.
 - [blocked] Real Google/Facebook login is not enabled in LAN/prod. Evidence: ConfigMap still has `USE_MOCK_OAUTH=true`; live secret keys do not include `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET` or `OAUTH_TOKEN_ENC_KEY`.
 - [x] Auth email queue/retry groundwork exists. Evidence: source commit `9670441 feat(auth): queue transactional emails`; `register` and `forgot-password` enqueue `auth-email` jobs, worker processes auth email separately from media, `/api/health/deps` exposes queue counts, and completed jobs are removed immediately.

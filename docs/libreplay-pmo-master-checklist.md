@@ -1,11 +1,28 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-19 21:32 Europe/Madrid
+Last updated: 2026-06-19 22:26 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
-Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated staging real-provider smokes and staging auth runbook are now green, but production is still blocked by real-provider secrets, real SMTP delivery in staging/prod, production video renditions/HLS, payments, DevOps/DR, compliance and observability gaps.
+Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated staging real-provider smokes, staging auth runbook, static staging secret contract, pending social-email completion and expanded mobile auth coverage are now green, but production is still blocked by real-provider secrets, real SMTP delivery in staging/prod, production video renditions/HLS, payments, DevOps/DR, compliance and observability gaps.
+
+## 2026-06-19 PMO Iteration - Pending Social Email And Mobile Auth Coverage
+
+- [x] Source pending-social patch committed and pushed. Evidence: source commit `783bb8d feat(auth): complete pending social email flow`.
+- [x] OAuth `pending_email` no longer points to a missing page. Evidence: source adds `/[locale]/auth/social-email` and `POST /api/auth/social-email`; Next build lists both `/[locale]/auth/social-email` and `/api/auth/social-email`.
+- [x] Pending social profile cookie is sealed and token-free. Evidence: callback stores a profile with `accessToken=null`, `refreshToken=null`, `raw={}` through `sealPendingOAuthProfile`; `openPendingOAuthProfile` rejects payloads that contain email, provider tokens or raw provider data and enforces a 10-minute TTL.
+- [x] Manual social-email completion is conflict-safe. Evidence: `completePendingOAuthEmail` normalizes `trim().toLowerCase()` emails, forces `emailVerified=false`, creates `User` + `AuthAccount` in a Prisma transaction, catches P2002 provider/email races as `email_conflict`, and never stores pending provider tokens.
+- [x] Social-email route has security controls. Evidence: route enforces `enforceAuthOrigin`, IP rate limiting, sealed pending-cookie precondition, `ALREADY_AUTHENTICATED` rejection, `safeInternalRedirect`, pending-cookie deletion, session creation and queued email verification.
+- [x] OAuth negative and mobile auth coverage expanded. Evidence: default Playwright list now reports `84 tests in 22 files`; new checks cover OAuth callback unknown/missing/malformed/no-cookie state, link-intent login redirect, social-email missing-cookie rejection, mobile OAuth buttons and mobile forgot/reset/verify/social-email routes.
+- [x] Source validation passed. Evidence: `pnpm test`; `pnpm typecheck`; `pnpm --filter @libreplay/web build`; `git diff --check`; source CI run `27846232443` completed `success`.
+- [x] Official release digests were published. Evidence: Release Image run `27846479315` completed `success`; web digest `sha256:95e6e4614879e40ff0d03552453a5c66f3ad7abba345b96afe7fdc1a6463ed55`; worker digest `sha256:ffdd4cf9c6679ab69f7d3dae9d7103038e0a0f0c7cc626bea52fdd5dd24da979`; tools digest `sha256:4570443a2be3c41364e173954366c755051c815136f924a89b421a83d23f1da6`; seed digest `sha256:63ffcd43832aef5845328425e0a4d015db73173c0197ddf6bed9e85ec905bc29`.
+- [x] GitOps deploy is complete. Evidence: GitOps commit `40c2faa feat: deploy libreplay pending social auth`; GitOps CI run `27846770418` completed `success`; Argo is `Synced/Healthy` at `40c2faaec74aaf01e84c7cfdf63a84098e9c0b37`.
+- [x] Runtime is on expected images. Evidence: `libreplay-web` is `1/1` on `sha-783bb8da7338@sha256:95e6e4614879e40ff0d03552453a5c66f3ad7abba345b96afe7fdc1a6463ed55`; `libreplay-worker` is `1/1` on `worker-sha-783bb8da7338@sha256:ffdd4cf9c6679ab69f7d3dae9d7103038e0a0f0c7cc626bea52fdd5dd24da979`.
+- [x] Runtime health, queues and logs are clean. Evidence: `/api/health/deps=200`; postgres/redis/minio/meilisearch `ok:true`; `authEmail` and `mediaModeration` waiting/active/delayed/failed are all `0`; recent web/worker log grep for `error|exception|failed|token=|actionUrl|reset-password|verify-email` returned no matches.
+- [x] Runtime Playwright validation passed. Evidence: focused auth/mobile run returned `19 passed (9.5s)`; full LAN run returned `84 passed (1.4m)`.
+- [x] Specialist PMO passes completed. Evidence: Peirce QA/Frontend found the missing pending-email page and selector risks; Parfit Backend/Security required transaction, safe next, email verification and strict pending payload; Confucius Verifier/Auditor passed security controls and originally blocked only runtime Playwright, which is now closed by LAN focused/full E2E.
+- [blocked] Production auth remains blocked. Evidence: LAN still uses mock OAuth and console email; real Google/Facebook, OAuth encryption secret and SMTP provider delivery are not live in a staging/prod app.
 
 ## 2026-06-19 PMO Iteration - Static Staging Secret Contract
 
