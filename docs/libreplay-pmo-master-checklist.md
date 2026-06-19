@@ -1,11 +1,27 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-19 16:48 Europe/Madrid
+Last updated: 2026-06-19 17:25 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
-Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation and media worker foundation are now green, but production is still blocked by real-provider, media compression/transcoding, payments, DevOps/DR, compliance and observability gaps.
+Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation and image variants are now green, but production is still blocked by real-provider, video transcoding, payments, DevOps/DR, compliance and observability gaps.
+
+## 2026-06-19 PMO Iteration - Image Variants Gate
+
+- [x] Source image variants patch committed and pushed. Evidence: source commit `282d735 feat(media): generate image variants`.
+- [x] Source CI and release automation passed. Evidence: source CI run `27833272292` completed `success`; Release Image run `27833556729` completed `success` for head `282d7355f43eedfae875f7307eb8f30710966a7a`.
+- [x] Official image digests were published. Evidence: web `sha256:aac3233831286fc38747f0fd5bd81107174532c7bcfabc4bd4aa903d0d714d66`; tools `sha256:602b39a0b85ff1f3007df22caf410aa294247db59f63ff4d885de95a7f751979`; worker `sha256:fa93aabbca6c3db25851d5cae6d17efd401f28554f39867909adad9b8fc399cb`.
+- [x] GitOps deploys web, worker and migration by digest. Evidence: GitOps commit `e92f703 feat: deploy libreplay image variants`; GitOps CI run `27833929688` completed `success`; `kubectl apply --dry-run=server -f k8s/manifest.yaml` passed.
+- [x] Runtime is on the expected revision. Evidence: Argo `Synced/Healthy` at `e92f703c606a2d56624132afa9b923c633535118`; `libreplay-web` and `libreplay-worker` rollouts completed with `sha-282d7355f43e` images.
+- [x] Database migration applied. Evidence: `Job/libreplay-db-migrate-282d735` completed `1/1`; DB has `MediaVariant.mimeType`, `MediaVariant.sizeBytes`, unique index `MediaVariant_mediaAssetId_kind_mimeType_key` and unique index `MediaVariant_objectKey_key`.
+- [x] Worker generates image variants. Evidence: focused media E2E generated asset `cmql2t9ll002htbd0mkoperbu`; DB has five variants: `THUMB_SMALL image/webp`, `THUMB_MEDIUM image/webp`, `THUMB_MEDIUM image/avif`, `THUMB_LARGE image/webp`, `BLURRED_PREVIEW image/webp`, each with `sizeBytes`, width and height.
+- [x] Variant objects exist in S3-compatible storage. Evidence: temporary `minio/mc` pod `mc stat` found original `image/png` object plus five variant objects under `variants/cmql2t9ll002htbd0mkoperbu/` with `Content-Type` `image/webp` or `image/avif` and non-zero sizes.
+- [x] Variant metadata endpoint is protected. Evidence: anonymous GET `/api/media/cmql2t9ll002htbd0mkoperbu/variants` returned `403 AUTH_REQUIRED`; creator non-owner session returned `403 UNATTACHED`.
+- [x] Queues and dependencies are healthy after processing. Evidence: worker logs show jobs `9` and `10` completed; Redis `bull:media-moderation` wait/active/delayed/failed all `0`; `/api/health/deps` reports postgres, redis, minio and meilisearch `ok:true`.
+- [x] LAN E2E remains green with mobile smoke. Evidence: focused media Playwright `3 passed`; full LAN Playwright `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-variants-full.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `74 passed (1.8m)`, including mobile tests `72-74`.
+- [x] Independent DevOps and QA/media verifier passes completed. Evidence: Franklin reported GitOps manifest PASS for the six expected changes; Beauvoir reported validation-plan PASS only after DB/Redis/worker/S3/perms gates, which were executed and recorded above.
+- [blocked] Production readiness remains blocked. Evidence: video pipeline, real CSAM/media moderation providers, HA/backups/observability, real OAuth/email and production payments remain open.
 
 ## 2026-06-19 PMO Iteration - Media Worker Foundation Gate
 
@@ -18,7 +34,7 @@ Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readine
 - [x] Runtime worker is healthy and drains media jobs. Evidence: Argo revision `e17dc062121cd2ca6889625d8bc3210f2675fe0d` is `Synced/Healthy`; `libreplay-web` and `libreplay-worker` are `1/1`; worker logs show `[jobs] worker started` and jobs `1-8` completed; Redis `bull:media-moderation:wait=0` and `failed=0`.
 - [x] LAN E2E remains green on the media worker release. Evidence: focused media Playwright `3 passed`; full LAN Playwright `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-media-worker-full.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `74 passed (1.2m)`.
 - [x] Independent backend, DevOps and release verifier passes completed. Evidence: Pauli reported read-only backend media checklist PASS; Lovelace reported worker deployment checklist PASS with residual production blockers; Nietzsche reported release/media verification PASS.
-- [blocked] Production readiness remains blocked. Evidence: compression/variant generation, video transcoding, real CSAM/media moderation providers, HA/backups/observability, real OAuth/email and production payments remain open.
+- [blocked] Production readiness remains blocked. Evidence: video transcoding, real CSAM/media moderation providers, HA/backups/observability, real OAuth/email and production payments remain open.
 
 ## 2026-06-19 PMO Iteration - Release Automation Gate
 

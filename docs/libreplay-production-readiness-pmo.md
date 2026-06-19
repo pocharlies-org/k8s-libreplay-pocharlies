@@ -1,14 +1,14 @@
 # LibrePlay Production Readiness PMO
 
 Status: `NOT-PRODUCTION-READY`
-Last updated: 2026-06-19 16:48 Europe/Madrid
+Last updated: 2026-06-19 17:25 Europe/Madrid
 Target today: `https://libreplay.lan.e-dani.com`
 
 ## Executive Position
 
 LibrePlay is a validated LAN demo, not a production-ready social network.
 
-PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation and worker-backed media queue foundation are now fixed, but the app still lacks production payments, real identity/age verification, real CSAM/media moderation, compression/transcoding, complete mobile validation, production observability, DR rehearsal and legal/compliance sign-off.
+PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue and image variant generation are now fixed, but the app still lacks production payments, real identity/age verification, real CSAM/media moderation, video transcoding, complete mobile validation, production observability, DR rehearsal and legal/compliance sign-off.
 
 ## RHO Task Checklist
 
@@ -21,12 +21,12 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ### Current Acceptance Evidence
 
-- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `1d86d1d feat(media): stream uploads and add worker image`.
-- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; media worker manifest commit `e17dc06` and PMO closeout commits are pushed.
-- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy`; runtime web image `sha-1d86d1d37e2a@sha256:0da74798859d5c8c27261885adfb648ebf6ed88d671ee1de5bef05cfd76255ab`, worker image `worker-sha-1d86d1d37e2a@sha256:4a156bdd8b6851a0d5028a62c886b452f61bc67655a851991086bdae8091fbe5`.
+- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `282d735 feat(media): generate image variants`.
+- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; image variants manifest commit `e92f703` is pushed.
+- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy` at `e92f703c606a2d56624132afa9b923c633535118`; runtime web image `sha-282d7355f43e@sha256:aac3233831286fc38747f0fd5bd81107174532c7bcfabc4bd4aa903d0d714d66`, worker image `worker-sha-282d7355f43e@sha256:fa93aabbca6c3db25851d5cae6d17efd401f28554f39867909adad9b8fc399cb`.
 - [x] LAN demo guardrail is active. Evidence: pod env has `DEPLOYMENT_MODE=lan-demo`, `NODE_ENV=production`, `ENABLE_LAN_DEMO_LOGIN=true`, `ENABLE_MOCK_PAYMENTS=true`, `ENABLE_MOCK_LLM=true`.
 - [x] Mobile smoke exists and passes. Evidence: full Playwright run includes mobile project tests `71-73` passing.
-- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-media-worker-full.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `74 passed (1.2m)`.
+- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-variants-full.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `74 passed (1.8m)`.
 - [x] Production security dependency baseline is clean for known npm advisories. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found` after upgrading Next to `15.5.19`, `next-intl` to `4.13.0` and adding transitives overrides.
 
 ## Specialist Assessment
@@ -63,7 +63,8 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 - [x] S3-compatible storage path exists. Evidence: `packages/media/src/s3.ts`, first-party upload endpoint, private MinIO deployment, `MediaAsset`/`MediaVariant` schema.
 - [x] Scalable media queue foundation exists. Evidence: `/api/media/complete` validates S3 object metadata, enqueues BullMQ only, has no inline processing fallback, and `Deployment/libreplay-worker` is running `1/1` with Redis wait/failed queues at `0`.
-- [blocked] Compression/transcoding is not implemented. Evidence: media package has no `sharp`/video pipeline dependency; `MediaVariant` schema exists but worker only runs mock CSAM/moderation and does not generate variants.
+- [x] Image compression/variants are implemented for LAN runtime. Evidence: source commit `282d735`; worker uses `sharp` to generate WebP/AVIF thumbnails and blurred preview; DB has five `MediaVariant` rows for test asset `cmql2t9ll002htbd0mkoperbu`; MinIO `mc stat` confirms original plus five variant objects with non-zero sizes and correct content types.
+- [blocked] Video transcoding/probing is not implemented. Evidence: image pipeline exists, but video thumbnails, duration/probe extraction, max-duration policy, compressed renditions or HLS/DASH are still absent.
 - [ ] Durable media lifecycle exists. Missing: original/variant retention rules, object lifecycle policies, AV scanning, hash dedupe, CDN strategy, backup/restore, orphan cleanup.
 - [ ] Video scalability exists. Missing: ffmpeg/MediaConvert pipeline, bitrate ladder, thumbnails, duration/probe extraction, max duration policy, async job UI.
 
@@ -78,6 +79,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 - [x] LAN GitOps deployment is healthy. Evidence: Argo `Synced/Healthy`; web, Postgres, Redis, Meili and MinIO all 1/1.
 - [x] Release automation is complete for current web/tools/seed/worker images. Evidence: GitHub secrets exist by name; source `Release Image` workflow run `27832114949` completed `success`, Harbor login passed, web/tools/seed/worker digests were published, GitOps commit `e17dc06` deployed the official web and worker digests, and full LAN Playwright on that image returned `74 passed`.
+- [x] Release automation remains complete for image variants. Evidence: source `Release Image` workflow run `27833556729` completed `success`; GitOps commit `e92f703` deploys web/tools/worker digests for source `282d735`; GitOps CI run `27833929688` completed `success`; Argo is `Synced/Healthy`.
 - [blocked] Production scale/HA is missing. Evidence: GitOps now has web plus worker, but still runs single replicas for web, worker, Postgres, Redis, Meili and MinIO; no HPA, PDB, NetworkPolicy, backup CronJobs or restore rehearsal.
 - [ ] Observability is production-grade. Missing: metrics, dashboards, structured logs, error tracking, alerting, SLOs, synthetic checks.
 - [ ] Disaster recovery is rehearsed. Missing: backup jobs, restore runbook, RPO/RTO targets, tested restore for Postgres/MinIO/Meili/Redis.
@@ -102,6 +104,8 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
   Evidence: `pocharlies-org/libreplay` Release Image run `27832114949` published web/tools/seed/worker digests; `pocharlies-org/k8s-libreplay-pocharlies` CI run `27832428507` passed; Argo is `Synced/Healthy`; full LAN E2E on the official release image is `74 passed`.
 - [x] Deploy media worker separately from web.
   Evidence: source commit `1d86d1d`, CI run `27831861195`, Release Image run `27832114949`, GitOps commit `e17dc06`, GitOps CI run `27832428507`, Argo `Synced/Healthy`, worker logs show media jobs completed, Redis media wait/failed queues are `0`, and full LAN E2E is `74 passed`.
+- [x] Add image compression/variants.
+  Evidence: source commit `282d735`, CI run `27833272292`, Release Image run `27833556729`, GitOps commit `e92f703`, GitOps CI run `27833929688`, `Job/libreplay-db-migrate-282d735` complete, Argo `Synced/Healthy`, worker jobs completed, Redis wait/active/delayed/failed queues are `0`, DB contains WebP/AVIF/blurred variants, MinIO confirms variant objects and full LAN E2E is `74 passed`.
 
 ### P1 - Auth And Identity
 
@@ -123,8 +127,6 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ### P1 - Media
 
-- [ ] Add image compression/variants.
-  Evidence required: uploaded image generates webp/avif variants and blurred preview; `MediaVariant` rows created; storage size measured.
 - [ ] Add video processing pipeline.
   Evidence required: thumbnails, duration/probe, compressed renditions or HLS/DASH, max duration policy, async job progress.
 - [ ] Add real CSAM/media moderation provider.
@@ -148,19 +150,18 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ## Recommended Next Technical Meta
 
-`PROD-2-MEDIA-VARIANTS-AND-VIDEO-PIPELINE`
+`PROD-2B-VIDEO-GROUNDWORK`
 
-Objective: turn the worker-backed S3 foundation into a size-efficient media pipeline for images first, then video metadata/rendition groundwork.
+Objective: extend the worker-backed media pipeline from image variants to video metadata, thumbnail and policy enforcement groundwork.
 
 Success criteria:
 
-- [ ] Uploaded images generate compressed WebP/AVIF variants and a small preview/blur artifact.
-- [ ] `MediaVariant` rows are created with object keys, mime types, dimensions, byte sizes and variant type.
-- [ ] Original media remains private in S3 and generated variants use deterministic S3 keys with orphan-cleanup/error behavior documented.
 - [ ] Video uploads are probed for duration/dimensions and have thumbnail generation plus max-duration rejection.
+- [ ] Video-derived thumbnail/preview objects use deterministic S3 keys and `MediaVariant` rows with mime type, size, width and height.
+- [ ] Unsupported/oversized/too-long videos are rejected or marked failed without retry storms.
 - [ ] Worker logs, Redis queues, source CI, release automation, GitOps, Argo and full LAN E2E remain green.
 
-Rationale: the app now avoids web-pod buffering and has a real BullMQ worker, but uploaded media is still stored as original-only objects. Production scale needs compressed variants, previews, video metadata and a future path to HLS/renditions before real user uploads.
+Rationale: uploaded images now produce compressed variants and preview artifacts, but production scale still needs video metadata, thumbnails, max-duration enforcement and a future path to HLS/renditions before real user uploads.
 
 ## External Policy Notes
 
