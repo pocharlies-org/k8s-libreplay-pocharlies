@@ -1,11 +1,24 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-19 16:22 Europe/Madrid
+Last updated: 2026-06-19 16:48 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
-Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation and release automation are now green, but production is still blocked by real-provider, media, payments, DevOps/DR, compliance and observability gaps.
+Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation and media worker foundation are now green, but production is still blocked by real-provider, media compression/transcoding, payments, DevOps/DR, compliance and observability gaps.
+
+## 2026-06-19 PMO Iteration - Media Worker Foundation Gate
+
+- [x] Source media foundation patch committed and pushed. Evidence: source commit `1d86d1d feat(media): stream uploads and add worker image`.
+- [x] `/api/media/upload/[id]` no longer buffers the whole file in web memory. Evidence: [upload route](/home/dibanez/k8s/libreplay/apps/web/src/app/api/media/upload/[id]/route.ts:1) uses `Readable.fromWeb(req.body)` with `ContentLength`; `req.arrayBuffer()` is removed from the media upload route.
+- [x] `/api/media/complete` validates S3 object existence/metadata before enqueue. Evidence: [complete route](/home/dibanez/k8s/libreplay/apps/web/src/app/api/media/complete/route.ts:1) calls `headObject`; missing uploads return `409 UPLOAD_NOT_FOUND`, size mismatch returns `400 SIZE_MISMATCH`, storage errors return `503 STORAGE_UNAVAILABLE`.
+- [x] `/api/media/complete` no longer falls back to inline processing. Evidence: route imports only `enqueueMediaModeration`; enqueue failure returns `503 MEDIA_QUEUE_UNAVAILABLE` and reverts the asset to `PENDING_UPLOAD`.
+- [x] Dedicated worker image is built and published by release automation. Evidence: source CI run `27831861195` completed `success`; Release Image run `27832114949` completed `success` and published worker digest `sha256:4a156bdd8b6851a0d5028a62c886b452f61bc67655a851991086bdae8091fbe5`.
+- [x] GitOps deploys web and worker by digest. Evidence: GitOps commit `e17dc06 feat: deploy libreplay media worker`, GitOps CI run `27832428507` completed `success`; server-side dry-run reported `deployment.apps/libreplay-worker created`.
+- [x] Runtime worker is healthy and drains media jobs. Evidence: Argo revision `e17dc062121cd2ca6889625d8bc3210f2675fe0d` is `Synced/Healthy`; `libreplay-web` and `libreplay-worker` are `1/1`; worker logs show `[jobs] worker started` and jobs `1-8` completed; Redis `bull:media-moderation:wait=0` and `failed=0`.
+- [x] LAN E2E remains green on the media worker release. Evidence: focused media Playwright `3 passed`; full LAN Playwright `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-media-worker-full.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `74 passed (1.2m)`.
+- [x] Independent backend, DevOps and release verifier passes completed. Evidence: Pauli reported read-only backend media checklist PASS; Lovelace reported worker deployment checklist PASS with residual production blockers; Nietzsche reported release/media verification PASS.
+- [blocked] Production readiness remains blocked. Evidence: compression/variant generation, video transcoding, real CSAM/media moderation providers, HA/backups/observability, real OAuth/email and production payments remain open.
 
 ## 2026-06-19 PMO Iteration - Release Automation Gate
 
@@ -16,7 +29,7 @@ Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readine
 - [x] GitOps deploys the official release web digest. Evidence: GitOps commit `1329105 fix: deploy libreplay release workflow image`, GitOps CI run `27831093880` completed `success`; Argo revision `1329105487400b531ebef6c3eb0541288bdb9ba5` is `Synced/Healthy`, web deployment is `1/1`, observedGeneration `20/20`.
 - [x] Full LAN Playwright remains green on the official release image. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-release-workflow-b3ebad4.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `73 passed (1.3m)`.
 - [x] Independent release verifier pass completed. Evidence: subagent `019ee039-d912-7ee3-8991-4fa651cb98c8` reported PASS for secrets-by-name, workflow run `27830810054`, Harbor login, published digests and read-only preservation.
-- [blocked] Production readiness remains blocked. Evidence: no real OAuth secrets/runtime, no real email verification/reset, payments are mock-only, no media worker/transcoding, no HA/backup/observability baseline.
+- [blocked] Production readiness remains blocked. Evidence: no real OAuth secrets/runtime, no real email verification/reset, payments are mock-only, no media compression/transcoding, no HA/backup/observability baseline.
 
 ## 2026-06-19 PMO Iteration - QA/Security Gate
 
@@ -30,7 +43,7 @@ Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readine
 - [x] Production dependency audit is clean. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found`.
 - [x] Source CI passed. Evidence: `pocharlies-org/libreplay` CI run `27830389764` completed `success`.
 - [x] GitOps CI passed. Evidence: `pocharlies-org/k8s-libreplay-pocharlies` CI run `27830499649` completed `success`.
-- [blocked] Production readiness remains blocked. Evidence: no real OAuth secrets/runtime, no real email verification/reset, payments are mock-only, no media worker/transcoding, no HA/backup/observability baseline.
+- [blocked] Production readiness remains blocked. Evidence: no real OAuth secrets/runtime, no real email verification/reset, payments are mock-only, no media compression/transcoding, no HA/backup/observability baseline.
 
 ## Directives
 
@@ -40,7 +53,7 @@ Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readine
 - [x] Secrets internos siguen en secrets. Evidence: manifest reads `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, MinIO, Meili and `SEED_USER_PASSWORD` from `libreplay-secrets`.
 - [x] Mocks visibles como LAN/no-prod. Evidence: ConfigMap enables mock flags; UI has demo/no-prod panel and creator/payment mock copy.
 - [x] LAN demo cannot be mistaken for production mode. Evidence: GitOps ConfigMap declares `DEPLOYMENT_MODE=lan-demo`; source env parser rejects `ENABLE_LAN_DEMO_LOGIN` outside `lan-demo` and rejects all critical mocks in `DEPLOYMENT_MODE=production`; web pod template carries config rollout annotation `deployment-mode-lan-demo-20260619-1302` so pods reload ConfigMap env.
-- [x] No cerrar con pods caidos, 404s, buttons mudos, skips criticos or missing secrets in LAN validation. Evidence: current full LAN Playwright is `73 passed`, Argo is `Synced/Healthy`, pod is `1/1`, and reset/rate-limit issues are fixed for `DEPLOYMENT_MODE=lan-demo`.
+- [x] No cerrar con pods caidos, 404s, buttons mudos, skips criticos or missing secrets in LAN validation. Evidence: current full LAN Playwright is `74 passed`, Argo is `Synced/Healthy`, web and worker pods are `1/1`, and reset/rate-limit issues are fixed for `DEPLOYMENT_MODE=lan-demo`.
 
 ## Acceptance Criteria
 

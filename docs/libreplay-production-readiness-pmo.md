@@ -1,14 +1,14 @@
 # LibrePlay Production Readiness PMO
 
 Status: `NOT-PRODUCTION-READY`
-Last updated: 2026-06-19 16:22 Europe/Madrid
+Last updated: 2026-06-19 16:48 Europe/Madrid
 Target today: `https://libreplay.lan.e-dani.com`
 
 ## Executive Position
 
 LibrePlay is a validated LAN demo, not a production-ready social network.
 
-PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline and release automation are now fixed, but the app still lacks production payments, real identity/age verification, real CSAM/media moderation, scalable media processing, complete mobile validation, production observability, DR rehearsal and legal/compliance sign-off.
+PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation and worker-backed media queue foundation are now fixed, but the app still lacks production payments, real identity/age verification, real CSAM/media moderation, compression/transcoding, complete mobile validation, production observability, DR rehearsal and legal/compliance sign-off.
 
 ## RHO Task Checklist
 
@@ -21,12 +21,12 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ### Current Acceptance Evidence
 
-- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `b3ebad4 fix: reset demo users in lan e2e setup`.
-- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`, head `1329105 fix: deploy libreplay release workflow image`.
-- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy`, revision `1329105487400b531ebef6c3eb0541288bdb9ba5`; pod image `sha-b3ebad4ac482@sha256:d7eeb53810159c9bc7fc3ed5355eac4d094ba1e7b213932b72ef3601d85df26c`.
+- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `1d86d1d feat(media): stream uploads and add worker image`.
+- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`, head `e17dc06 feat: deploy libreplay media worker`.
+- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy`, revision `e17dc062121cd2ca6889625d8bc3210f2675fe0d`; web image `sha-1d86d1d37e2a@sha256:0da74798859d5c8c27261885adfb648ebf6ed88d671ee1de5bef05cfd76255ab`, worker image `worker-sha-1d86d1d37e2a@sha256:4a156bdd8b6851a0d5028a62c886b452f61bc67655a851991086bdae8091fbe5`.
 - [x] LAN demo guardrail is active. Evidence: pod env has `DEPLOYMENT_MODE=lan-demo`, `NODE_ENV=production`, `ENABLE_LAN_DEMO_LOGIN=true`, `ENABLE_MOCK_PAYMENTS=true`, `ENABLE_MOCK_LLM=true`.
 - [x] Mobile smoke exists and passes. Evidence: full Playwright run includes mobile project tests `71-73` passing.
-- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-b3ebad4.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `73 passed (1.3m)`.
+- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 PWJSON=/tmp/libreplay-playwright-media-worker-full.json pnpm --filter @libreplay/web exec playwright test --reporter=list` -> `74 passed (1.2m)`.
 - [x] Production security dependency baseline is clean for known npm advisories. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found` after upgrading Next to `15.5.19`, `next-intl` to `4.13.0` and adding transitives overrides.
 
 ## Specialist Assessment
@@ -62,7 +62,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 ### Media / S3 / Compression
 
 - [x] S3-compatible storage path exists. Evidence: `packages/media/src/s3.ts`, first-party upload endpoint, private MinIO deployment, `MediaAsset`/`MediaVariant` schema.
-- [blocked] Scalable media processing is not implemented. Evidence: no deployed worker in GitOps; `/api/media/complete` falls back to inline processing if BullMQ enqueue fails.
+- [x] Scalable media queue foundation exists. Evidence: `/api/media/complete` validates S3 object metadata, enqueues BullMQ only, has no inline processing fallback, and `Deployment/libreplay-worker` is running `1/1` with Redis wait/failed queues at `0`.
 - [blocked] Compression/transcoding is not implemented. Evidence: media package has no `sharp`/video pipeline dependency; `MediaVariant` schema exists but worker only runs mock CSAM/moderation and does not generate variants.
 - [ ] Durable media lifecycle exists. Missing: original/variant retention rules, object lifecycle policies, AV scanning, hash dedupe, CDN strategy, backup/restore, orphan cleanup.
 - [ ] Video scalability exists. Missing: ffmpeg/MediaConvert pipeline, bitrate ladder, thumbnails, duration/probe extraction, max duration policy, async job UI.
@@ -78,7 +78,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 - [x] LAN GitOps deployment is healthy. Evidence: Argo `Synced/Healthy`; web, Postgres, Redis, Meili and MinIO all 1/1.
 - [x] Release automation is complete for current web/tools/seed images. Evidence: GitHub secrets exist by name; source `Release Image` workflow run `27830810054` completed `success`, Harbor login passed, web/tools/seed digests were published, GitOps commit `1329105` deployed the official web digest, and full LAN Playwright on that image returned `73 passed`.
-- [blocked] Production scale/HA is missing. Evidence: GitOps runs single replicas for web, Postgres, Redis, Meili, MinIO; no HPA, PDB, NetworkPolicy, backup CronJobs or worker Deployment.
+- [blocked] Production scale/HA is missing. Evidence: GitOps now has web plus worker, but still runs single replicas for web, worker, Postgres, Redis, Meili and MinIO; no HPA, PDB, NetworkPolicy, backup CronJobs or restore rehearsal.
 - [ ] Observability is production-grade. Missing: metrics, dashboards, structured logs, error tracking, alerting, SLOs, synthetic checks.
 - [ ] Disaster recovery is rehearsed. Missing: backup jobs, restore runbook, RPO/RTO targets, tested restore for Postgres/MinIO/Meili/Redis.
 
@@ -100,8 +100,8 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
   Evidence: `pnpm audit --prod` has no known vulnerabilities; `pnpm test`, `pnpm typecheck`, web build, source CI `27830389764`, GitOps CI `27830499649` and Argo rollout pass.
 - [x] Fix release image automation.
   Evidence: `pocharlies-org/libreplay` Release Image run `27830810054` published web/tools/seed digests; `pocharlies-org/k8s-libreplay-pocharlies` CI run `27831093880` passed; Argo is `Synced/Healthy` at GitOps revision `1329105487400b531ebef6c3eb0541288bdb9ba5`; full LAN E2E on the official release image is `73 passed`.
-- [ ] Deploy media worker separately from web.
-  Evidence required: BullMQ worker Deployment running; `/api/media/complete` does not rely on inline fallback in production/staging.
+- [x] Deploy media worker separately from web.
+  Evidence: source commit `1d86d1d`, CI run `27831861195`, Release Image run `27832114949`, GitOps commit `e17dc06`, GitOps CI run `27832428507`, Argo `Synced/Healthy`, worker logs show media jobs completed, Redis media wait/failed queues are `0`, and full LAN E2E is `74 passed`.
 
 ### P1 - Auth And Identity
 
@@ -155,12 +155,12 @@ Objective: remove the next production blockers after the validation harness: rel
 Success criteria:
 
 - [x] `Release Image` workflow can publish web/tools/seed without manual Harbor push.
-- [ ] `/api/media/upload/[id]` streams to S3 instead of buffering whole files in web memory.
-- [ ] `/api/media/complete` validates object existence before enqueue/complete.
-- [ ] A `libreplay-worker` Deployment runs BullMQ media jobs; production/staging no longer depend on inline fallback.
-- [ ] CI, GitOps deployment and full LAN E2E remain green.
+- [x] `/api/media/upload/[id]` streams to S3 instead of buffering whole files in web memory.
+- [x] `/api/media/complete` validates object existence before enqueue/complete.
+- [x] A `libreplay-worker` Deployment runs BullMQ media jobs; production/staging no longer depend on inline fallback.
+- [x] CI, GitOps deployment and full LAN E2E remain green.
 
-Rationale: the app is now auditable, but production operation is still blocked by manual image release and a media path that can OOM web pods and cannot generate durable variants/transcodes.
+Rationale: release automation and worker-backed media queueing are now auditable. Production operation is still blocked by missing image variants/compression, video transcoding, real safety providers and broader HA/observability controls.
 
 ## External Policy Notes
 
