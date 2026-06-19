@@ -1,11 +1,30 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-19 19:47 Europe/Madrid
+Last updated: 2026-06-19 21:01 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
-Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork, auth email recovery groundwork and OAuth/CSRF hardening are now green, but production is still blocked by real-provider secrets, production SMTP/queues, production video renditions/HLS, payments, DevOps/DR, compliance and observability gaps.
+Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs and staging/prod SMTP/OAuth guardrails are now green, but production is still blocked by real-provider secrets, real SMTP delivery in staging/prod, production video renditions/HLS, payments, DevOps/DR, compliance and observability gaps.
+
+## 2026-06-19 PMO Iteration - Auth Email Queue And Staging Guardrails Gate
+
+- [x] Source auth email queue patch committed and pushed. Evidence: source commit `9670441 feat(auth): queue transactional emails`.
+- [x] Source console redaction patch committed and pushed. Evidence: source commit `53a8b48 fix(auth): redact console email action urls`.
+- [x] Source validation passed. Evidence: `pnpm --filter @libreplay/auth test`; `pnpm test`; `pnpm typecheck`; `pnpm --filter @libreplay/web build`; `pnpm audit --prod`; source CI run `27842739635` completed `success`.
+- [x] Auth email queue is wired through routes and worker. Evidence: `register` and `forgot-password` enqueue `auth-email` jobs, `packages/jobs` has a separate `auth-email` BullMQ queue/handler, worker starts auth-email and media workers, and `/api/health/deps` exposes queue snapshots for both queues.
+- [x] Staging/prod SMTP/OAuth guardrails fail closed. Evidence: env validation requires `NODE_ENV=production` for `DEPLOYMENT_MODE=staging|production`; staging/prod require `AUTH_EMAIL_PROVIDER=smtp`, `SMTP_HOST`, `SMTP_PORT`, non-local `MAIL_FROM`; `USE_MOCK_OAUTH=false` requires Google/Facebook secrets plus `OAUTH_TOKEN_ENC_KEY`.
+- [x] Job retention avoids completed token-bearing payload retention. Evidence: `auth-email` jobs use `removeOnComplete: true`; failed jobs are bounded to age `3600s` and count `25`.
+- [x] Console auth-email logs do not include action URLs or tokens. Evidence: final worker logs show `[auth-email:password_reset] queued console delivery to=demo-member@libreplay.local` and `auth-email completed 2 password_reset`; `rg 'token=|url=|reset-password|verify-email|password-reset|actionUrl'` against recent worker logs returned no matches.
+- [x] Official release digests were published. Evidence: Release Image run `27843010658` completed `success` for source `53a8b4845725`; web digest `sha256:05ad264d771d1375949583ce4af2383133fe07ad4eb246706c343347d2fc6abe`; worker digest `sha256:f28dea3a5d6c5c367f4aa01ea3e7809e1d65376811b6e1b419708223330045c7`; tools digest `sha256:a2a4001b9e3ac01c903eb401846781132dbd563352e0b8058b9bb8ebcc229fc1`.
+- [x] GitOps deploys web and worker by digest. Evidence: GitOps commit `6ca7ede fix: deploy redacted auth email logs`; GitOps CI run `27843274783` completed `success`; Argo is `Synced/Healthy` at `6ca7ede05399458c3ba42da9439e638ee0ba52aa`.
+- [x] Runtime is on the expected revision. Evidence: `libreplay-web` is `1/1` on `sha-53a8b4845725@sha256:05ad264d771d1375949583ce4af2383133fe07ad4eb246706c343347d2fc6abe`; `libreplay-worker` is `1/1` on `worker-sha-53a8b4845725@sha256:f28dea3a5d6c5c367f4aa01ea3e7809e1d65376811b6e1b419708223330045c7`.
+- [x] Runtime health and queues are clean. Evidence: `/api/health/deps=200` with postgres/redis/minio/meilisearch `ok:true`; `authEmail` and `mediaModeration` waiting/active/delayed/failed all `0`.
+- [x] Focused auth E2E remains green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 npx playwright test e2e/03-auth.anon.spec.ts --reporter=line` -> `7 passed (4.4s)`.
+- [x] Full LAN E2E remains green with mobile smoke. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 npx playwright test --reporter=line` from `apps/web` -> `79 passed (1.3m)`, including mobile tests `77-79`.
+- [x] Runtime secret posture is explicitly still LAN/demo. Evidence: live env has `DEPLOYMENT_MODE=lan-demo`, `USE_MOCK_OAUTH=true`, `AUTH_EMAIL_PROVIDER=console`, local `MAIL_FROM`; live `libreplay-secrets` key names do not include Google, Facebook, OAuth encryption or SMTP keys.
+- [x] Independent verifier pass completed. Evidence: Lagrange initially reported FAIL because completed/failed auth-email jobs retained action URLs in Redis; after `removeOnComplete: true` and bounded failed retention, Lagrange re-audited PASS for this LAN sub-hito with residual risk documented.
+- [blocked] Full PROD-3C production readiness remains blocked. Evidence: no real Google/Facebook/SMTP/OAuth encryption secrets are present in runtime, no `DEPLOYMENT_MODE=staging` app exists, `USE_MOCK_OAUTH=true` remains active in LAN, and no real-provider/SMTP smoke has been run.
 
 ## 2026-06-19 PMO Iteration - OAuth/CSRF Hardening Gate
 
