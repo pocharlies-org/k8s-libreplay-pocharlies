@@ -334,7 +334,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: payment-fail-closed-20260620-0035
+        libreplay.e-dani.com/config-rollout: security-mutation-gate-20260620-0122
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -342,7 +342,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-d2438a0ff2cb@sha256:f11312ad087fe409ca14e26fc7029f25e177c951db18d8d619cb9047f5a83f13
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-c3ca34b73c57@sha256:fa19e023ba2d11ea3cd4fc0572b5661f61b531ed8656360eccf07425b898cd13
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -401,7 +401,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: payment-fail-closed-20260620-0035
+        libreplay.e-dani.com/config-rollout: security-mutation-gate-20260620-0122
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -409,7 +409,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-d2438a0ff2cb@sha256:aa0284ebe199dde396c0a13da03268b32aaa127341b29b0a62000888696e5730
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-c3ca34b73c57@sha256:b23bd33f5a862e006f3ed9fa5c66672272c922870d605b0f3bb70165e6c32378
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
