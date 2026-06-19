@@ -1,7 +1,7 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-READY`
-Last updated: 2026-06-19 13:02 Europe/Madrid
+Last updated: 2026-06-19 13:08 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 ## Directives
@@ -30,6 +30,7 @@ Target: `https://libreplay.lan.e-dani.com`
 - [x] Source canonical repo is in the ARC-backed org. Evidence: `origin` for `/home/dibanez/k8s/libreplay` is `git@github.com:pocharlies-org/libreplay.git`; previous personal repo remains as remote `personal` for traceability.
 - [x] Source CI runs on ARC `arc-k8s` and is green. Evidence: `pocharlies-org/libreplay` run `27820394287` completed successfully on 2026-06-19; job `verify` passed `checkout`, `pnpm/action-setup`, `setup-node`, `pnpm install --frozen-lockfile`, Prisma generate, typecheck, unit tests, web build and Docker build smoke in `5m45s`.
 - [x] Production safety env guardrails have unit/CI coverage. Evidence: source commit `61c6dff feat(config): add deployment mode guardrails`; tests cover `DEPLOYMENT_MODE=lan-demo`, production mock rejection, demo-login rejection outside LAN demo and strict string boolean parsing; local `pnpm test`, `pnpm typecheck`, `pnpm --filter @libreplay/web build` passed; `pocharlies-org/libreplay` CI run `27821491050` passed `typecheck`, unit tests, web build and Docker build smoke in `4m59s`.
+- [x] Guardrail image published for runtime. Evidence: local Docker build/push from source commit `61c6dff`; image `harbor.e-dani.com/homelab/libreplay-web:sha-61c6dffb1b0c@sha256:46a00da87e50fb0dae9f77d4b5e458902e1e422eab82f7a732b91bd4380bfb43`.
 - [x] `pnpm install --frozen-lockfile`. Evidence: exited 0; lockfile up to date and already up to date.
 - [x] `pnpm typecheck`. Evidence: exited 0 on 2026-06-19.
 - [x] `pnpm test`. Evidence: exited 0; config 4 tests, security 7 tests, auth no-tests pass, web 8 tests.
@@ -39,10 +40,10 @@ Target: `https://libreplay.lan.e-dani.com`
 
 ## Images / Harbor
 
-- [x] Web image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:sha-23659593fb24@sha256:b4d043b93ce69ef4dba6da9c9f404700455a91576170d6e96c07891f38fcf122`.
+- [x] Web image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:sha-61c6dffb1b0c@sha256:46a00da87e50fb0dae9f77d4b5e458902e1e422eab82f7a732b91bd4380bfb43`.
 - [x] Migrate tools image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:tools-sha-59e051279464@sha256:d5183716a46f849f8f1df8676767f2c00a92cd5e29e1d2b1caf8bb51cbd029db`.
 - [x] Seed image pushed and inspected. Evidence: `harbor.e-dani.com/homelab/libreplay-web:seed-sha-15da141534f1@sha256:d1c44a5a95ae5330f8f1ce42b25412f88d702b65bee3dc58ce872e67142bfa77`.
-- [x] Image labels match source. Evidence: web returned revision `23659593fb2448acbe490296c0ece9d981d9e6d8`; tools returned `59e0512794648a4ce46c5e90007ebbfabedd4099`; seed returned `15da141534f1d75c4d638940113875b02e2aba00`.
+- [x] Image labels match source. Evidence: web image label `org.opencontainers.image.revision=61c6dffb1b0cd177cf54e5eded0ebee4140d7d09`; tools returned `59e0512794648a4ce46c5e90007ebbfabedd4099`; seed returned `15da141534f1d75c4d638940113875b02e2aba00`.
 
 ## GitOps
 
