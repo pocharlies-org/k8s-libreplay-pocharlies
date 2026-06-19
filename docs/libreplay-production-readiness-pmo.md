@@ -1,14 +1,14 @@
 # LibrePlay Production Readiness PMO
 
 Status: `NOT-PRODUCTION-READY`
-Last updated: 2026-06-19 23:18 Europe/Madrid
+Last updated: 2026-06-20 00:07 Europe/Madrid
 Target today: `https://libreplay.lan.e-dani.com`
 
 ## Executive Position
 
 LibrePlay is a validated LAN demo, not a production-ready social network.
 
-PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated real-provider Playwright smoke, staging auth runbook, static staging secret contract, pending social-email completion, authenticated mobile core coverage and the mobile Discover responsive fix are now fixed, but the app still lacks real OAuth provider runtime/secrets, production payments, real identity/age verification providers, real CSAM/media moderation, real SMTP provider delivery in staging/prod, production video renditions/HLS, full mobile product matrix validation, production observability, DR rehearsal and legal/compliance sign-off.
+PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork, video MP4/HLS rendition MVP, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated real-provider Playwright smoke, staging auth runbook, static staging secret contract, pending social-email completion, authenticated mobile core coverage and the mobile Discover responsive fix are now fixed, but the app still lacks real OAuth provider runtime/secrets, production payments, real identity/age verification providers, real CSAM/media moderation, real SMTP provider delivery in staging/prod, full production media delivery/lifecycle/CDN controls, full mobile product matrix validation, production observability, DR rehearsal and legal/compliance sign-off.
 
 ## RHO Task Checklist
 
@@ -21,18 +21,19 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ### Current Acceptance Evidence
 
-- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `8d64302 fix(web): stack discover filters on mobile`.
-- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; mobile Discover layout manifest commit `aa85ca3` is pushed.
-- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy` at `aa85ca3a51a438a3e0a24a89886d9c47bdbebb90`; runtime web image `sha-8d643024885d@sha256:2039dfb76f3aeb90517c76a540ad2e4de982632af4339aa8055db6621979f7e4`, worker image `worker-sha-8d643024885d@sha256:d10c8b95909fbe2a45108ad4c9e16fe69a70e0c1d2c89a70b8ecaf2b382e497e`.
+- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `2a04229 feat(media): add video renditions`.
+- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; current runtime manifest commit `32ad2dc fix: keep libreplay migration job history` is pushed.
+- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy` at `32ad2dc30f9a99d72aaadeca6c2b3e70be85d6f7`; runtime web image `sha-2a042298f46f@sha256:db7e0ed3db32a2fc8b865698b47318be4315c0c36c8e9042e8e0355c2145f149`, worker image `worker-sha-2a042298f46f@sha256:26e07b1b51b5781753dcfffef675bfba95ca09613402b649bfb78dc2184eb077`.
 - [x] LAN demo guardrail is active. Evidence: pod env has `DEPLOYMENT_MODE=lan-demo`, `NODE_ENV=production`, `ENABLE_LAN_DEMO_LOGIN=true`, `ENABLE_MOCK_PAYMENTS=true`, `ENABLE_MOCK_LLM=true`.
 - [x] Authenticated mobile core coverage exists and passes. Evidence: mobile Playwright project has `11 tests in 2 files`; final LAN mobile run returned `11 passed (10.0s)`, covering auth layout, OAuth buttons, forgot/reset/verify/social-email, bottom nav, feed publish/report, Discover filters/message, messages send, settings/security and map.
-- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 pnpm --filter @libreplay/web exec playwright test --reporter=line` -> `90 passed (1.4m)`.
+- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 pnpm --filter @libreplay/web exec playwright test --reporter=line` -> `90 passed (1.5m)`.
 - [x] Production security dependency baseline is clean for known npm advisories. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found` after upgrading Next to `15.5.19`, `next-intl` to `4.13.0` and adding transitives overrides.
 - [x] Auth email queue is deployed and drains. Evidence: `/api/health/deps` reports `authEmail` waiting/active/delayed/failed all `0`; worker logs show `[auth-email:password_reset] queued console delivery to=demo-member@libreplay.local` and `auth-email completed 2 password_reset` with no URL or token.
 - [x] Staging can no longer pass with mock OAuth enabled at app-config level. Evidence: source commit `31b26c3`; `DEPLOYMENT_MODE=staging` requires `USE_MOCK_OAUTH=false`, Google/Facebook secrets and `OAUTH_TOKEN_ENC_KEY`.
 - [x] Static staging secret contract exists. Evidence: `staging/libreplay-staging-contract.yaml` defines only Namespace, ExternalSecret and ConfigMap for `libreplay-staging`, references `secret/libreplay/staging`, and validates with `kubectl apply --dry-run=client`.
 - [x] Pending OAuth email flow no longer dead-ends. Evidence: `/[locale]/auth/social-email` and `POST /api/auth/social-email` exist; pending social cookie is AES-GCM sealed, token-free and TTL-bound; manual email completion queues verification email and full LAN E2E is green.
 - [x] Mobile Discover responsive bug is fixed. Evidence: first LAN mobile run on authenticated mobile coverage found the filters panel pushed `Mensaje` outside the iPhone viewport; source `8d64302` stacks Discover filters on mobile and final LAN mobile/full E2E passed.
+- [x] Video MP4/HLS rendition MVP is deployed and validated. Evidence: source commit `2a04229`, migration `20260619212500_video_renditions`, Release Image run `27849982311`, GitOps commits `6437736` and `32ad2dc`, focused LAN media E2E `5 passed (7.2s)`, latest DB video asset `cmqlh6b4m000d4ozyuwcxz4ry` has `THUMB_LARGE`, `VIDEO_MP4_480P` and `VIDEO_HLS_480P`, and full LAN E2E returned `90 passed (1.5m)`.
 
 ## Specialist Assessment
 
@@ -80,9 +81,10 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Scalable media queue foundation exists. Evidence: `/api/media/complete` validates S3 object metadata, enqueues BullMQ only, has no inline processing fallback, and `Deployment/libreplay-worker` is running `1/1` with Redis wait/failed queues at `0`.
 - [x] Image compression/variants are implemented for LAN runtime. Evidence: source commit `282d735`; worker uses `sharp` to generate WebP/AVIF thumbnails and blurred preview; DB has five `MediaVariant` rows for test asset `cmql2t9ll002htbd0mkoperbu`; MinIO `mc stat` confirms original plus five variant objects with non-zero sizes and correct content types.
 - [x] Video probe/thumbnail groundwork is implemented for LAN runtime. Evidence: source commits `a55c0f6` and `e9a1135`; Release Image run `27836030980`; GitOps commit `e576d68`; worker runtime has `ffmpeg`/`ffprobe` `5.1.9`; focused media Playwright `5 passed`; DB asset `cmql4l8dw000d31zblcy4a08a` has `durationSeconds=1`, `width=16`, `height=16`, and `THUMB_LARGE image/jpeg` variant; MinIO confirms original `video/mp4` and thumbnail `image/jpeg` objects.
-- [blocked] Production video transcoding/renditions are not complete. Evidence: probe, max-duration policy and thumbnail generation exist, but compressed video renditions, HLS/DASH, bitrate ladder, CDN strategy, async progress UI and lifecycle policies are still absent.
+- [x] Video MP4/HLS rendition MVP is implemented for LAN runtime. Evidence: source commit `2a04229`; worker creates `VIDEO_MP4_480P video/mp4` and `VIDEO_HLS_480P application/vnd.apple.mpegurl`; variant route enforces viewer authorization and supports MP4 byte ranges; focused LAN media E2E `5 passed`; DB asset `cmqlh6b4m000d4ozyuwcxz4ry` contains thumbnail, MP4 480p and HLS variants.
+- [blocked] Production media delivery is not complete. Evidence: one 480p MP4/HLS rendition is validated, but production still lacks a bitrate ladder, CDN/signed delivery strategy, async progress UI, lifecycle/retention policy, failure replay/dead-letter runbook, real CSAM/media moderation providers and multi-replica worker scaling.
 - [ ] Durable media lifecycle exists. Missing: original/variant retention rules, object lifecycle policies, AV scanning, hash dedupe, CDN strategy, backup/restore, orphan cleanup.
-- [ ] Video scalability exists. Missing: compressed renditions or HLS/DASH, bitrate ladder, CDN strategy, async job progress UI, retention/lifecycle policies and production worker scaling.
+- [ ] Video scalability exists. Missing: bitrate ladder beyond 480p, CDN strategy, async job progress UI, retention/lifecycle policies, failure replay and production worker scaling.
 
 ### Trust, Safety, Legal, Compliance
 
@@ -97,6 +99,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Release automation is complete for current web/tools/seed/worker images. Evidence: GitHub secrets exist by name; source `Release Image` workflow run `27832114949` completed `success`, Harbor login passed, web/tools/seed/worker digests were published, GitOps commit `e17dc06` deployed the official web and worker digests, and full LAN Playwright on that image returned `74 passed`.
 - [x] Release automation remains complete for image variants. Evidence: source `Release Image` workflow run `27833556729` completed `success`; GitOps commit `e92f703` deploys web/tools/worker digests for source `282d735`; GitOps CI run `27833929688` completed `success`; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for video groundwork. Evidence: source `Release Image` workflow run `27836030980` completed `success`; GitOps commit `e576d68` deploys web/worker digests for source `e9a1135`; GitOps CI run `27836441318` completed `success`; Argo is `Synced/Healthy`.
+- [x] Release automation remains complete for video renditions/HLS. Evidence: source CI run `27849729670` and Release Image run `27849982311` completed `success`; GitOps commits `6437736` and `32ad2dc` deploy web/worker/tools digests for source `2a04229`; GitOps CI runs `27850274935` and `27850375820` completed `success`; migration job `libreplay-db-migrate-2a04229` completed; Argo is `Synced/Healthy`; full LAN E2E is `90 passed`.
 - [x] Release automation remains complete for auth email recovery. Evidence: source CI run `27837492921` completed `success`; Release Image run `27837784400` completed `success`; GitOps commit `da4868b` deploys web/worker/tools digests for source `1bbe568`; GitOps CI run `27838078792` completed `success`; migration job `libreplay-db-migrate-1bbe568` completed; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for OAuth/CSRF hardening. Evidence: source CI run `27839801643` completed `success`; Release Image run `27840087320` completed `success`; GitOps commit `a3a6567` deploys web/worker/tools digests for source `c37cdca`; GitOps CI run `27840418461` completed `success`; migration job `libreplay-db-migrate-c37cdca` completed; Argo is `Synced/Healthy`.
 - [x] Release automation remains complete for auth email queue/redaction. Evidence: source CI run `27842739635` completed `success`; Release Image run `27843010658` completed `success`; GitOps commit `6ca7ede` deploys web/worker digests for source `53a8b48`; GitOps CI run `27843274783` completed `success`; Argo is `Synced/Healthy`.
@@ -172,8 +175,10 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 - [x] Add video probe/thumbnail/max-duration groundwork.
   Evidence: source commits `a55c0f6` and `e9a1135`; worker uses `ffprobe`/`ffmpeg` with timeouts; video upload E2E generated `THUMB_LARGE image/jpeg`; DB/S3 evidence recorded for asset `cmql4l8dw000d31zblcy4a08a`.
-- [ ] Add production video renditions/HLS pipeline.
-  Evidence required: compressed renditions or HLS/DASH, bitrate ladder, async job progress, lifecycle/retention policy, production worker scaling and failure replay plan.
+- [x] Add video MP4/HLS rendition MVP.
+  Evidence: source commit `2a04229`; worker creates `VIDEO_MP4_480P` and `VIDEO_HLS_480P`; authorized variant route supports MP4 byte ranges and HLS playlist/segments; focused LAN media E2E `5 passed`; full LAN E2E `90 passed`.
+- [ ] Complete production media delivery/lifecycle pipeline.
+  Evidence required: bitrate ladder beyond 480p, CDN/signed delivery strategy, async job progress, lifecycle/retention policy, production worker scaling and failure replay/dead-letter plan.
 - [ ] Add real CSAM/media moderation provider.
   Evidence required: provider integration tests, positive-match rejection, escalation/logging path, manual review queue.
 
@@ -195,20 +200,20 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ## Recommended Next Technical Meta
 
-`PROD-3F-LIVE-STAGING-ARGO-APP`
+`PROD-6A-PAYMENT-FAIL-CLOSED-AND-PSP-ABSTRACTION`
 
-Objective: create a live but controlled `libreplay-staging` Argo path only after deciding how to handle missing real provider secrets.
+Objective: make the payments surface fail closed outside LAN/demo and prepare a provider abstraction that can support an adult-friendly PSP decision without pretending Stripe is already approved.
 
 Success criteria:
 
-- [ ] Decision recorded: do not create live app until secrets exist, or create manual/no-autosync app with expected Degraded status.
-- [ ] If secrets exist, `libreplay-staging` namespace and ExternalSecret reconcile from `secret/libreplay/staging`.
-- [ ] `scripts/check-libreplay-staging-contract.sh libreplay-staging` passes without printing values.
-- [ ] Staging Argo app points to a staging path and cannot mutate LAN PVCs, DB, MinIO bucket or hostname.
-- [ ] Real-provider Playwright smoke runs with `PW_STAGING_REAL_AUTH=1`.
-- [ ] LAN app remains `Synced/Healthy` and full LAN E2E remains green.
+- [ ] Production/staging cannot route purchases through mock payments unless an explicit LAN/test mode is active.
+- [ ] Payment provider selection is environment-driven and rejects missing/unsupported provider config in staging/production.
+- [ ] Existing LAN mock purchase E2E still passes only under `DEPLOYMENT_MODE=lan-demo`.
+- [ ] Unit/API tests cover fail-closed provider selection, webhook placeholder rejection and purchase access denial on provider errors.
+- [ ] Documentation records that Stripe remains a blocked PSP decision until adult-content approval is confirmed.
+- [ ] Source CI, release, GitOps deploy and full LAN E2E remain green.
 
-Rationale: PROD-3E created the static staging secret/config contract without applying workloads. The next step is intentionally blocked by operational choice and secret availability: either populate staging secrets first, or accept a controlled manual Argo app that will be unhealthy until secrets exist.
+Rationale: real Google/Facebook/SMTP staging is still blocked by external secrets, while payments remain an internal security/product risk because mock purchase paths exist. This meta is executable now and reduces the chance of accidentally treating demo monetization as production monetization.
 
 ## External Policy Notes
 
