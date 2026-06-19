@@ -1,11 +1,29 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-19 22:26 Europe/Madrid
+Last updated: 2026-06-19 23:18 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
-Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated staging real-provider smokes, staging auth runbook, static staging secret contract, pending social-email completion and expanded mobile auth coverage are now green, but production is still blocked by real-provider secrets, real SMTP delivery in staging/prod, production video renditions/HLS, payments, DevOps/DR, compliance and observability gaps.
+Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated staging real-provider smokes, staging auth runbook, static staging secret contract, pending social-email completion, authenticated mobile core coverage and the mobile Discover responsive fix are now green, but production is still blocked by real-provider secrets, real SMTP delivery in staging/prod, production video renditions/HLS, payments, DevOps/DR, compliance and observability gaps.
+
+## 2026-06-19 PMO Iteration - Authenticated Mobile Core And Discover Layout
+
+- [x] Source mobile coverage patch committed and pushed. Evidence: source commit `0b712f2 test(web): tighten mobile message assertion` after initial coverage commit `7a03ffc`; Playwright mobile list reports `11 tests in 2 files`, including 6 authenticated mobile core tests in `16-mobile-auth.mobile.spec.ts`.
+- [x] Independent QA rejected weak assertion and it was fixed. Evidence: Carson reported FAIL because the mobile message test only checked any `.lp-bubble.me`; source commit `0b712f2` now asserts `.lp-bubble.me` with the unique message text.
+- [x] Runtime mobile E2E found a real responsive bug. Evidence: first LAN mobile run on `0b712f2` returned `9 passed, 2 failed`; Discover filters kept a desktop `280px minmax(0,1fr)` grid on iPhone and pushed the `Mensaje` control outside the viewport.
+- [x] Discover mobile layout bug fixed. Evidence: source commit `8d64302 fix(web): stack discover filters on mobile`; `DiscoverClient` uses `lp-discover-main with-filters`; CSS stacks filters to one column below `900px` while preserving desktop two-column layout and sticky filters.
+- [x] Source validation passed. Evidence: `pnpm --filter @libreplay/web typecheck`; `pnpm --filter @libreplay/web test`; `pnpm --filter @libreplay/web build`; `pnpm --filter @libreplay/web exec playwright test --list --project=mobile`; `git diff --check`; source CI run `27848224011` completed `success`.
+- [x] Official release digests were published. Evidence: Release Image run `27848471274` completed `success`; web digest `sha256:2039dfb76f3aeb90517c76a540ad2e4de982632af4339aa8055db6621979f7e4`; worker digest `sha256:d10c8b95909fbe2a45108ad4c9e16fe69a70e0c1d2c89a70b8ecaf2b382e497e`; tools digest `sha256:a2ceced4c83ce63506f00dfa1d27d0cd5bb2976714923a8d75c231ea55fa0ccd`; seed digest `sha256:ca07e18e917625e73d5fa7002bb55c75f6a07e9cf56a53894ea1427263f752a9`.
+- [x] GitOps deploy is complete. Evidence: GitOps commit `aa85ca3 fix: deploy libreplay mobile discover layout`; GitOps CI run `27848721618` completed `success`; server-side dry-run passed; Argo is `Synced/Healthy` at `aa85ca3a51a438a3e0a24a89886d9c47bdbebb90`.
+- [x] Runtime is on expected images. Evidence: `libreplay-web` is `1/1` on `sha-8d643024885d@sha256:2039dfb76f3aeb90517c76a540ad2e4de982632af4339aa8055db6621979f7e4`; `libreplay-worker` is `1/1` on `worker-sha-8d643024885d@sha256:d10c8b95909fbe2a45108ad4c9e16fe69a70e0c1d2c89a70b8ecaf2b382e497e`.
+- [x] Runtime health, queues and logs are clean. Evidence: `/api/health/deps=200`; postgres/redis/minio/meilisearch `ok:true`; `authEmail` and `mediaModeration` waiting/active/delayed/failed are all `0`; recent web/worker log grep for `error|exception|failed|token=|actionUrl|reset-password|verify-email` returned no matches.
+- [x] Runtime mobile validation passed. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 pnpm --filter @libreplay/web exec playwright test --project=mobile --reporter=line` returned `11 passed (10.0s)`.
+- [x] Runtime desktop regression validation passed. Evidence: focused member desktop run for Discover, map and settings returned `8 passed (11.1s)`.
+- [x] Full LAN E2E validation passed. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 pnpm --filter @libreplay/web exec playwright test --reporter=line` returned `90 passed (1.4m)`.
+- [x] Specialist PMO passes completed. Evidence: Carson initially blocked certification due weak message assertion; Sartre reported PASS for the Discover responsive fix and confirmed the `+0.5` tap-target tolerance does not hide horizontal offscreen bugs.
+- [blocked] Full mobile product readiness remains blocked. Evidence: authenticated mobile core flows are covered, but mobile upload/camera capture, verification UX, creator checkout/admin moderation mobile paths, PWA/installability, Android/iOS/browser matrix and automated accessibility checks remain open.
+- [blocked] Production readiness remains blocked. Evidence: LAN still uses mock OAuth, console email and mock payments; real Google/Facebook/OAuth encryption/SMTP/payment/provider/compliance/observability gates remain open.
 
 ## 2026-06-19 PMO Iteration - Pending Social Email And Mobile Auth Coverage
 

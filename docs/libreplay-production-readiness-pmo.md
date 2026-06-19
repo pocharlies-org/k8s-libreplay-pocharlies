@@ -1,14 +1,14 @@
 # LibrePlay Production Readiness PMO
 
 Status: `NOT-PRODUCTION-READY`
-Last updated: 2026-06-19 22:26 Europe/Madrid
+Last updated: 2026-06-19 23:18 Europe/Madrid
 Target today: `https://libreplay.lan.e-dani.com`
 
 ## Executive Position
 
 LibrePlay is a validated LAN demo, not a production-ready social network.
 
-PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated real-provider Playwright smoke, staging auth runbook, static staging secret contract, pending social-email completion and expanded mobile auth smoke are now fixed, but the app still lacks real OAuth provider runtime/secrets, production payments, real identity/age verification providers, real CSAM/media moderation, real SMTP provider delivery in staging/prod, production video renditions/HLS, complete mobile validation, production observability, DR rehearsal and legal/compliance sign-off.
+PMO assessment: do not open this to real users until the P0/P1 gates below are closed with evidence. The LAN validation harness, critical dependency baseline, release automation, worker-backed media queue, image variant generation, video probe/thumbnail groundwork, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated real-provider Playwright smoke, staging auth runbook, static staging secret contract, pending social-email completion, authenticated mobile core coverage and the mobile Discover responsive fix are now fixed, but the app still lacks real OAuth provider runtime/secrets, production payments, real identity/age verification providers, real CSAM/media moderation, real SMTP provider delivery in staging/prod, production video renditions/HLS, full mobile product matrix validation, production observability, DR rehearsal and legal/compliance sign-off.
 
 ## RHO Task Checklist
 
@@ -21,17 +21,18 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 
 ### Current Acceptance Evidence
 
-- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `783bb8d feat(auth): complete pending social email flow`.
-- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; pending-social manifest commit `40c2faa` is pushed.
-- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy` at `40c2faaec74aaf01e84c7cfdf63a84098e9c0b37`; runtime web image `sha-783bb8da7338@sha256:95e6e4614879e40ff0d03552453a5c66f3ad7abba345b96afe7fdc1a6463ed55`, worker image `worker-sha-783bb8da7338@sha256:ffdd4cf9c6679ab69f7d3dae9d7103038e0a0f0c7cc626bea52fdd5dd24da979`.
+- [x] Source repo exists and is clean. Evidence: `/home/dibanez/k8s/libreplay` on `main`, head `8d64302 fix(web): stack discover filters on mobile`.
+- [x] GitOps repo exists and is clean. Evidence: `/home/dibanez/k8s/k8s-libreplay-pocharlies` on `deploy/prod`; mobile Discover layout manifest commit `aa85ca3` is pushed.
+- [x] LAN runtime is healthy. Evidence: Argo `Synced/Healthy` at `aa85ca3a51a438a3e0a24a89886d9c47bdbebb90`; runtime web image `sha-8d643024885d@sha256:2039dfb76f3aeb90517c76a540ad2e4de982632af4339aa8055db6621979f7e4`, worker image `worker-sha-8d643024885d@sha256:d10c8b95909fbe2a45108ad4c9e16fe69a70e0c1d2c89a70b8ecaf2b382e497e`.
 - [x] LAN demo guardrail is active. Evidence: pod env has `DEPLOYMENT_MODE=lan-demo`, `NODE_ENV=production`, `ENABLE_LAN_DEMO_LOGIN=true`, `ENABLE_MOCK_PAYMENTS=true`, `ENABLE_MOCK_LLM=true`.
-- [x] Mobile auth smoke exists and passes. Evidence: full Playwright run includes mobile project tests `80-84`, covering auth layout, OAuth buttons, forgot/reset/verify/social-email routes and landing CTA.
-- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 pnpm --filter @libreplay/web exec playwright test --reporter=line` -> `84 passed (1.4m)`.
+- [x] Authenticated mobile core coverage exists and passes. Evidence: mobile Playwright project has `11 tests in 2 files`; final LAN mobile run returned `11 passed (10.0s)`, covering auth layout, OAuth buttons, forgot/reset/verify/social-email, bottom nav, feed publish/report, Discover filters/message, messages send, settings/security and map.
+- [x] Full LAN E2E is green. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 pnpm --filter @libreplay/web exec playwright test --reporter=line` -> `90 passed (1.4m)`.
 - [x] Production security dependency baseline is clean for known npm advisories. Evidence: `pnpm audit --prod` -> `No known vulnerabilities found` after upgrading Next to `15.5.19`, `next-intl` to `4.13.0` and adding transitives overrides.
 - [x] Auth email queue is deployed and drains. Evidence: `/api/health/deps` reports `authEmail` waiting/active/delayed/failed all `0`; worker logs show `[auth-email:password_reset] queued console delivery to=demo-member@libreplay.local` and `auth-email completed 2 password_reset` with no URL or token.
 - [x] Staging can no longer pass with mock OAuth enabled at app-config level. Evidence: source commit `31b26c3`; `DEPLOYMENT_MODE=staging` requires `USE_MOCK_OAUTH=false`, Google/Facebook secrets and `OAUTH_TOKEN_ENC_KEY`.
 - [x] Static staging secret contract exists. Evidence: `staging/libreplay-staging-contract.yaml` defines only Namespace, ExternalSecret and ConfigMap for `libreplay-staging`, references `secret/libreplay/staging`, and validates with `kubectl apply --dry-run=client`.
 - [x] Pending OAuth email flow no longer dead-ends. Evidence: `/[locale]/auth/social-email` and `POST /api/auth/social-email` exist; pending social cookie is AES-GCM sealed, token-free and TTL-bound; manual email completion queues verification email and full LAN E2E is green.
+- [x] Mobile Discover responsive bug is fixed. Evidence: first LAN mobile run on authenticated mobile coverage found the filters panel pushed `Mensaje` outside the iPhone viewport; source `8d64302` stacks Discover filters on mobile and final LAN mobile/full E2E passed.
 
 ## Specialist Assessment
 
@@ -45,8 +46,10 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 ### Frontend / Mobile
 
 - [x] Mobile smoke for auth shell/auth recovery passes. Evidence: mobile Playwright project, iPhone-like viewport, 5 tests passing for auth layout, OAuth button tap targets, forgot/reset/verify/social-email routes and landing CTA.
-- [blocked] Mobile coverage is insufficient. Evidence: only `13-verify-mobile.mobile.spec.ts` is mobile-specific; it still does not cover authenticated feed, discover, messaging, upload, verification, payments or moderation flows.
+- [x] Authenticated mobile core coverage passes. Evidence: `16-mobile-auth.mobile.spec.ts` validates bottom nav, feed publish/report, Discover filters/message, messages send, settings/security and map on the mobile project; final LAN mobile run returned `11 passed`.
+- [x] Mobile responsive regression was fixed from test evidence. Evidence: Discover filters initially failed by pushing `Mensaje` outside viewport; `lp-discover-main.with-filters` now stacks below `900px`; final full LAN E2E returned `90 passed`.
 - [ ] PWA/mobile app readiness exists. Missing: installability, safe-area handling, touch gestures for swipe, file capture from camera, mobile upload progress, offline/error states, Android/iOS cross-browser validation.
+- [ ] Full mobile product matrix coverage exists. Missing: mobile upload/camera capture, verification UX, creator checkout, admin/moderation, payments edge cases and real-device browser matrix.
 - [ ] Accessibility baseline is complete. Missing: automated a11y checks, keyboard flows, screen-reader labels for custom controls, contrast audit across dark UI.
 
 ### Backend / Auth
