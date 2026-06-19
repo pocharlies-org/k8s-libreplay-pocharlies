@@ -66,8 +66,8 @@ not print their values:
 - `OAUTH_TOKEN_ENC_KEY`
 - `SMTP_HOST`
 - `SMTP_PORT`
-- `SMTP_USER` when the provider requires auth
-- `SMTP_PASSWORD` when the provider requires auth
+- `SMTP_USER`
+- `SMTP_PASSWORD`
 
 ## Verification Commands
 
