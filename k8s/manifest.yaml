@@ -329,7 +329,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: deployment-mode-lan-demo-20260619-1302
+        libreplay.e-dani.com/config-rollout: lan-demo-validation-20260619-1559
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -337,7 +337,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-61c6dffb1b0c@sha256:46a00da87e50fb0dae9f77d4b5e458902e1e422eab82f7a732b91bd4380bfb43
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-97fac1a2fcc4@sha256:419640c01875e3d23b7d90ef81287acb86c8b11c5fd9436b97dc2e0f283eb8e1
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
