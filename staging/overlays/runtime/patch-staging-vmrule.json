@@ -1,0 +1,36 @@
+- op: replace
+  path: /spec/groups/0/name
+  value: libreplay.staging.runtime
+- op: replace
+  path: /spec/groups/0/rules/0/expr
+  value: |
+    (up{namespace="libreplay-staging",job="libreplay-web"} == 0)
+    or
+    absent(up{namespace="libreplay-staging",job="libreplay-web"})
+- op: replace
+  path: /spec/groups/0/rules/1/expr
+  value: |
+    kube_deployment_spec_replicas{namespace="libreplay-staging",deployment=~"libreplay-web|libreplay-worker"}
+      >
+    kube_deployment_status_replicas_available{namespace="libreplay-staging",deployment=~"libreplay-web|libreplay-worker"}
+- op: replace
+  path: /spec/groups/0/rules/2/expr
+  value: |
+    kube_statefulset_replicas{namespace="libreplay-staging",statefulset="libreplay-postgres"}
+      >
+    kube_statefulset_status_replicas_ready{namespace="libreplay-staging",statefulset="libreplay-postgres"}
+- op: replace
+  path: /spec/groups/0/rules/3/expr
+  value: min by (dependency) (libreplay_dependency_up{namespace="libreplay-staging",service="libreplay-web"}) < 1
+- op: replace
+  path: /spec/groups/0/rules/4/expr
+  value: max by (dependency) (libreplay_dependency_latency_ms{namespace="libreplay-staging",service="libreplay-web"}) > 2000
+- op: replace
+  path: /spec/groups/0/rules/5/expr
+  value: sum by (queue) (libreplay_queue_jobs{namespace="libreplay-staging",service="libreplay-web",state="failed"}) > 0
+- op: replace
+  path: /spec/groups/0/rules/6/expr
+  value: sum by (queue) (libreplay_queue_jobs{namespace="libreplay-staging",service="libreplay-web",state=~"waiting|delayed"}) > 25
+- op: replace
+  path: /spec/groups/0/rules/7/expr
+  value: sum by (container) (increase(kube_pod_container_status_restarts_total{namespace="libreplay-staging",container=~"libreplay-web|libreplay-worker"}[15m])) > 0

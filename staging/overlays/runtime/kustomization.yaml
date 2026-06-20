@@ -18,6 +18,13 @@ patches:
   - path: patch-configmap.yaml
   - path: patch-postgres-db.yaml
   - path: patch-required-provider-secrets.yaml
+  - path: patch-staging-vmrule.json
+    target:
+      group: operator.victoriametrics.com
+      version: v1beta1
+      kind: VMRule
+      name: libreplay-runtime
+  - path: patch-disable-lan-dashboard.yaml
   - path: patch-vmservicescrape.yaml
   - path: patch-ingressroute.json
     target:

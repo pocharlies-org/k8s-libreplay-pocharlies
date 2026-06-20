@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-libreplay-runtime
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "0"
