@@ -50,7 +50,7 @@ Scope: unblock `ExternalSecret/libreplay-secrets` in namespace `libreplay-stagin
 ## Current Evidence
 
 - `scripts/check-libreplay-staging-preflight.sh --strict` on 2026-06-20 09:23 CEST currently reports exactly two blockers: `ExternalSecret/libreplay-secrets` is `Ready=False|SecretSyncedError`, and `Secret/libreplay-secrets` is not materialized.
-- The same preflight reports Argo `libreplay-staging` as `Synced|Degraded|f65342d1c1b8090c29e02092b11f1b8143994dca|staging`, validates the staging config posture, confirms no runtime workloads are present, and proves DNS/TLS for `libreplay-staging.e-dani.com`.
+- The same preflight reports Argo `libreplay-staging` as `Synced|Degraded` on path `staging`, validates the staging config posture, confirms no runtime workloads are present, and proves DNS/TLS for `libreplay-staging.e-dani.com`.
 - `ExternalSecret/harbor-pull` in the same namespace is `Ready=True`, so the Vault store and ESO controller are working.
 - 1Password metadata search found no item named LibrePlay or SauvagePlay for OAuth/SMTP.
 - 1Password metadata has adjacent candidates, but they are not enough to authorize reuse:

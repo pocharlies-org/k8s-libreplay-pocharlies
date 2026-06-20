@@ -31,7 +31,8 @@ a separate staging environment before production can be considered.
 
 - [x] Argo app `libreplay-staging` exists and targets the contract-only
   staging path. Evidence: `kubectl -n argocd get application libreplay-staging`
-  reports `Synced|Degraded|f65342d1c1b8090c29e02092b11f1b8143994dca|staging`.
+  reports `Synced|Degraded` on path `staging`; it may advance through docs-only
+  GitOps commits while remaining contract-only and blocked by missing Vault data.
 - [x] Namespace `libreplay-staging` exists with its own `ExternalSecret`.
   Evidence: `kubectl -n libreplay-staging get externalsecret libreplay-secrets`
   reports `SecretSyncedError`, proving the contract exists but Vault data is
