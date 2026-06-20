@@ -340,7 +340,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: observability-20260620-0957
+        libreplay.e-dani.com/config-rollout: prod-12a-csrf-20260620-ebaf65c
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -348,7 +348,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-2aba2684d4a4@sha256:554f61bc5fb45324b531e9864686075bc16e2277b2ac7594125e32d7b8d08657
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-ebaf65ce0676@sha256:51c24aaade3438245648889a004246934e45d7d7576e81ed1c2bead334c8645b
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -418,7 +418,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: observability-20260620-0957
+        libreplay.e-dani.com/config-rollout: prod-12a-csrf-20260620-ebaf65c
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -426,7 +426,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-2aba2684d4a4@sha256:8955ceb44849e2f386cd1490e68a5c0e04db68982a55a8e1f27c68a8dfaa7b8e
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-ebaf65ce0676@sha256:6e8a69bdd6d92f4910f6d9f4d68001580d14c78381b3803672e1acfbfd30aeb2
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
