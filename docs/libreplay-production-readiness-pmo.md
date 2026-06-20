@@ -1,7 +1,7 @@
 # LibrePlay Production Readiness PMO
 
 Status: `NOT-PRODUCTION-READY`
-Last updated: 2026-06-20 06:43 CEST
+Last updated: 2026-06-20 07:11 CEST
 Target today: `https://libreplay.lan.e-dani.com`
 
 ## Executive Position
@@ -80,7 +80,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Console auth-email logging is redacted. Evidence: source commit `53a8b48 fix(auth): redact console email action urls`; final worker logs contain recipient and job metadata only, and `rg 'token=|url=|reset-password|verify-email|password-reset|actionUrl'` against recent worker logs found no matches.
 - [x] Real-provider staging smoke is defined without weakening LAN suite. Evidence: source commit `31b26c3` adds gated Playwright project `staging-real-auth`; default LAN suite remains `79 tests`, gated staging list is `81 tests` only when `PW_STAGING_REAL_AUTH=1`.
 - [x] Real-provider staging runtime manifest is prepared. Evidence: `staging/overlays/runtime` renders `DEPLOYMENT_MODE=staging`, `USE_MOCK_OAUTH=false`, required Google/Facebook/OAuth/SMTP Secret refs, SMTP email provider, disabled mock payments and staging host `libreplay-staging.e-dani.com`; checker rejects LAN-only drift.
-- [blocked] Real Google/Facebook staging is not live yet. Evidence: no live Argo app/namespace/ExternalSecret for `libreplay-staging`; no proven Vault values; no DNS/TLS proof for `libreplay-staging.e-dani.com`; real-provider Playwright smoke has only been listed, not executed.
+- [blocked] Real Google/Facebook staging is not live yet. Evidence: contract-only Argo app/namespace/ExternalSecret for `libreplay-staging` now exist, but `ExternalSecret/libreplay-secrets` is `Ready=False SecretSyncedError` because `secret/libreplay/staging` provider data is missing; no proven Google/Facebook/OAuth/SMTP Vault values, no DNS/TLS proof for `libreplay-staging.e-dani.com`, and real-provider Playwright smoke has only been listed, not executed.
 - [blocked] Email auth is not production-grade yet. Evidence: token flows and queue/retry groundwork exist, but real SMTP secrets/runtime, real provider delivery, staging smoke, delivery observability, support recovery workflow and abuse controls are still absent.
 - [ ] Auth session hardening is complete. Missing: session rotation policy, device/session management UI, 2FA/passkeys, suspicious login alerting.
 

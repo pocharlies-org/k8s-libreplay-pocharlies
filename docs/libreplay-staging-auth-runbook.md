@@ -1,7 +1,7 @@
 # LibrePlay Staging Auth Runbook
 
 Status: `BLOCKED-BY-REAL-SECRETS`
-Last updated: 2026-06-20 06:43 CEST
+Last updated: 2026-06-20 07:11 CEST
 
 ## Objective
 
@@ -24,10 +24,13 @@ a separate staging environment before production can be considered.
 
 ### Acceptance Criteria
 
-- [ ] Argo app `libreplay-staging` exists and targets a staging overlay.
-  Evidence required: `kubectl -n argocd get application libreplay-staging`.
-- [ ] Namespace `libreplay-staging` exists with its own `ExternalSecret`.
-  Evidence required: `kubectl -n libreplay-staging get externalsecret`.
+- [x] Argo app `libreplay-staging` exists and targets the contract-only
+  staging path. Evidence: `kubectl -n argocd get application libreplay-staging`
+  reports `Synced|Degraded|1648469277e96cd7f8eb7e0e5384a8f837becc70|staging`.
+- [x] Namespace `libreplay-staging` exists with its own `ExternalSecret`.
+  Evidence: `kubectl -n libreplay-staging get externalsecret libreplay-secrets`
+  reports `SecretSyncedError`, proving the contract exists but Vault data is
+  missing.
 - [x] Static staging auth contract exists without enabling live staging.
   Evidence: `staging/libreplay-staging-contract.yaml` contains only Namespace,
   `ExternalSecret` and `ConfigMap`; it does not define workloads or ingress.
@@ -41,15 +44,17 @@ a separate staging environment before production can be considered.
   performs client dry-run and rejects LAN host, LAN DB name, mock OAuth,
   console auth email, mock payments, optional OAuth/SMTP secret refs,
   ClientIP-only ingress and SSO middleware.
-- [ ] Vault/ExternalSecret exposes the required key names without printing
-  values. Evidence required:
-  `scripts/check-libreplay-staging-contract.sh libreplay-staging`.
+- [blocked] Vault/ExternalSecret exposes the required key names without
+  printing values. Blocker: live `ExternalSecret/libreplay-secrets` is
+  `Ready=False` with `SecretSyncedError` because provider data is absent.
 - [x] Static contract can be validated without live secrets. Evidence:
   `scripts/check-libreplay-staging-contract.sh --static` validates key names,
   staging config, non-placeholder HTTPS URLs and non-local `MAIL_FROM`.
-- [ ] Staging config is real-provider posture. Evidence required:
-  `DEPLOYMENT_MODE=staging`, `NODE_ENV=production`, `USE_MOCK_OAUTH=false`,
-  `AUTH_EMAIL_PROVIDER=smtp`, HTTPS `APP_BASE_URL`/`AUTH_URL`.
+- [x] Staging config is real-provider posture at the contract level. Evidence:
+  live `ConfigMap/libreplay-config` exists in `libreplay-staging`; static
+  contract and runtime checks require `DEPLOYMENT_MODE=staging`,
+  `NODE_ENV=production`, `USE_MOCK_OAUTH=false`, `AUTH_EMAIL_PROVIDER=smtp`,
+  and HTTPS `APP_BASE_URL`/`AUTH_URL`.
 - [ ] Google OAuth start redirects to `accounts.google.com` from staging.
   Evidence required: gated Playwright staging smoke passes.
 - [ ] Facebook OAuth start redirects to `facebook.com` from staging.
@@ -130,11 +135,12 @@ email-verification job to drain without failures.
 
 ## Current Blockers
 
-- No live Argo app named `libreplay-staging`.
-- No live namespace named `libreplay-staging`.
-- No live `ExternalSecret/libreplay-secrets` for staging.
-- Static contract exists at `staging/libreplay-staging-contract.yaml`; the safe
-  first live step is an Argo app that targets this contract-only path.
+- Argo app `libreplay-staging` exists and targets the contract-only path
+  `staging`; it must not be repointed to the runtime overlay yet.
+- Namespace `libreplay-staging`, `ConfigMap/libreplay-config` and
+  `ExternalSecret/libreplay-secrets` exist.
+- `ExternalSecret/libreplay-secrets` is `Ready=False SecretSyncedError` because
+  `secret/libreplay/staging` provider data is missing in Vault.
 - Runtime overlay exists at `staging/overlays/runtime`, but it is intentionally not wired
   into Argo until real secrets, DNS/TLS and pull-secret handling are validated.
 - Staging DNS/TLS for `libreplay-staging.e-dani.com` has not been proven live.
