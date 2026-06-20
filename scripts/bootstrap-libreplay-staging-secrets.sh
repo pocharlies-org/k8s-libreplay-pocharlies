@@ -41,7 +41,10 @@ Generated when absent:
 
 Write mode also requires these explicit evidence acknowledgements:
   LIBREPLAY_STAGING_PROVIDER_CALLBACKS_CONFIRMED=1
+  LIBREPLAY_STAGING_GOOGLE_CALLBACK_URI=https://libreplay-staging.e-dani.com/api/auth/oauth/google/callback
+  LIBREPLAY_STAGING_FACEBOOK_CALLBACK_URI=https://libreplay-staging.e-dani.com/api/auth/oauth/facebook/callback
   LIBREPLAY_STAGING_SMTP_SENDER_CONFIRMED=1
+  LIBREPLAY_STAGING_SMTP_MAIL_FROM='LibrePlay <noreply@libreplay.e-dani.com>'
 
 The acknowledgements mean the Google and Meta apps are authorized for:
   https://libreplay-staging.e-dani.com/api/auth/oauth/google/callback
@@ -137,13 +140,26 @@ fi
 if ! [[ "${SMTP_PORT}" =~ ^[0-9]+$ ]]; then
   fail "SMTP_PORT must be an integer"
 fi
+if [ "${SMTP_PORT}" != "465" ]; then
+  fail "SMTP_PORT must be 465 while staging config has SMTP_SECURE=true"
+fi
+if [[ "${SMTP_HOST}" =~ (example\.com|localhost|\.local)$ ]]; then
+  fail "SMTP_HOST must not be a placeholder or local-only host"
+fi
 
 for key in "${provider_keys[@]}"; do
   value="${!key}"
-  if [[ "$value" =~ (TODO|todo|PLACEHOLDER|placeholder|CHANGEME|changeme) ]]; then
+  if [[ "$value" =~ (TODO|todo|PLACEHOLDER|placeholder|CHANGEME|changeme|DUMMY|dummy|FAKE|fake) ]]; then
     fail "${key} looks like a placeholder"
   fi
 done
+
+[[ "${#GOOGLE_CLIENT_SECRET}" -ge 16 ]] \
+  || fail "GOOGLE_CLIENT_SECRET must be at least 16 characters"
+[[ "${#FACEBOOK_CLIENT_SECRET}" -ge 16 ]] \
+  || fail "FACEBOOK_CLIENT_SECRET must be at least 16 characters"
+[[ "${#SMTP_PASSWORD}" -ge 16 ]] \
+  || fail "SMTP_PASSWORD must be at least 16 characters"
 
 DB_USER="${DB_USER:-libreplay_staging}"
 DB_PASSWORD="${DB_PASSWORD:-$(random_hex 24)}"
@@ -209,18 +225,22 @@ if [ "$mode" = "dry-run" ]; then
   if [ "${LIBREPLAY_STAGING_PROVIDER_CALLBACKS_CONFIRMED:-0}" != "1" ]; then
     printf 'BLOCKED: write mode still needs LIBREPLAY_STAGING_PROVIDER_CALLBACKS_CONFIRMED=1\n' >&2
   fi
+  if [ -z "${LIBREPLAY_STAGING_GOOGLE_CALLBACK_URI:-}" ]; then
+    printf 'BLOCKED: write mode still needs LIBREPLAY_STAGING_GOOGLE_CALLBACK_URI\n' >&2
+  fi
+  if [ -z "${LIBREPLAY_STAGING_FACEBOOK_CALLBACK_URI:-}" ]; then
+    printf 'BLOCKED: write mode still needs LIBREPLAY_STAGING_FACEBOOK_CALLBACK_URI\n' >&2
+  fi
   if [ "${LIBREPLAY_STAGING_SMTP_SENDER_CONFIRMED:-0}" != "1" ]; then
     printf 'BLOCKED: write mode still needs LIBREPLAY_STAGING_SMTP_SENDER_CONFIRMED=1\n' >&2
+  fi
+  if [ -z "${LIBREPLAY_STAGING_SMTP_MAIL_FROM:-}" ]; then
+    printf 'BLOCKED: write mode still needs LIBREPLAY_STAGING_SMTP_MAIL_FROM\n' >&2
   fi
   exit 0
 fi
 
-if [ "${LIBREPLAY_STAGING_PROVIDER_CALLBACKS_CONFIRMED:-0}" != "1" ]; then
-  block "refusing Vault write until LibrePlay staging Google/Meta callback evidence is confirmed"
-fi
-if [ "${LIBREPLAY_STAGING_SMTP_SENDER_CONFIRMED:-0}" != "1" ]; then
-  block "refusing Vault write until LibrePlay staging SMTP sender/domain evidence is confirmed"
-fi
+scripts/check-libreplay-staging-secret-evidence.sh --strict --vault-write
 
 need vault
 vault status >/dev/null

@@ -1,7 +1,7 @@
 # LibrePlay Staging Auth Runbook
 
 Status: `BLOCKED-BY-REAL-SECRETS`
-Last updated: 2026-06-21 01:18 CEST
+Last updated: 2026-06-21 01:35 CEST
 
 ## Objective
 
@@ -26,6 +26,10 @@ a separate staging environment before production can be considered.
 - [x] Secret intake exists. Evidence:
   [libreplay-staging-secrets-intake.md](./libreplay-staging-secrets-intake.md)
   maps the required Vault fields, validation rules and no-echo push procedure.
+- [x] Non-secret evidence preflight exists. Evidence:
+  `scripts/check-libreplay-staging-secret-evidence.sh --strict` validates exact
+  Google/Meta callback URI metadata, SMTP sender metadata and staging mailbox
+  shape without printing secret values.
 
 ### Acceptance Criteria
 
@@ -136,6 +140,7 @@ not print their values:
 - `SMTP_PORT`
 - `SMTP_USER`
 - `SMTP_PASSWORD`
+- `METRICS_BEARER_TOKEN`
 
 The field-level source and validation checklist lives in
 [libreplay-staging-secrets-intake.md](./libreplay-staging-secrets-intake.md).
@@ -179,9 +184,13 @@ exported in the shell:
 
 ```bash
 set +x
-scripts/bootstrap-libreplay-staging-secrets.sh --dry-run
 export LIBREPLAY_STAGING_PROVIDER_CALLBACKS_CONFIRMED=1
+export LIBREPLAY_STAGING_GOOGLE_CALLBACK_URI=https://libreplay-staging.e-dani.com/api/auth/oauth/google/callback
+export LIBREPLAY_STAGING_FACEBOOK_CALLBACK_URI=https://libreplay-staging.e-dani.com/api/auth/oauth/facebook/callback
 export LIBREPLAY_STAGING_SMTP_SENDER_CONFIRMED=1
+export LIBREPLAY_STAGING_SMTP_MAIL_FROM='LibrePlay <noreply@libreplay.e-dani.com>'
+scripts/check-libreplay-staging-secret-evidence.sh --strict --vault-write
+scripts/bootstrap-libreplay-staging-secrets.sh --dry-run
 scripts/bootstrap-libreplay-staging-secrets.sh --write --sync-eso
 scripts/check-libreplay-staging-preflight.sh --strict
 ```
@@ -191,7 +200,8 @@ Run the gated real-provider smoke from the source repo:
 ```bash
 cd /home/dibanez/k8s/libreplay/apps/web
 PW_STAGING_REAL_AUTH=1 \
-PW_STAGING_AUTH_EMAIL=staging-auth-smoke@example.com \
+PW_STAGING_AUTH_EMAIL=staging-auth-smoke@libreplay.e-dani.com \
+PW_STAGING_AUTH_EMAIL_PLUS_CONFIRMED=1 \
 BASE_URL=https://libreplay-staging.e-dani.com \
 PWRETRIES=0 \
 npx playwright test --project=staging-real-auth --reporter=line
@@ -201,7 +211,9 @@ The staging smoke is intentionally absent from the default LAN suite. It only
 appears when `PW_STAGING_REAL_AUTH=1` is set, so the normal LAN gate remains
 strictly skip-free.
 
-`PW_STAGING_AUTH_EMAIL` must be a plus-addressable or catch-all mailbox. The
+`PW_STAGING_AUTH_EMAIL` must be a plus-addressable or catch-all mailbox, and
+`PW_STAGING_AUTH_EMAIL_PLUS_CONFIRMED=1` must be set only after that behavior is
+verified. The
 smoke registers a unique address derived from that value, then waits for the
 email-verification job to drain without failures.
 
@@ -230,9 +242,10 @@ email-verification job to drain without failures.
 - Current 1Password re-check is blocked because the Mac `op` account is not
   signed in; prior metadata did not prove LibrePlay-specific OAuth/SMTP items.
 - GitHub environment `staging` now exists for repo `pocharlies-org/libreplay`;
-  the required environment secret `PW_STAGING_AUTH_EMAIL` is still absent.
+  the required environment secrets `PW_STAGING_AUTH_EMAIL` and
+  `PW_STAGING_AUTH_EMAIL_PLUS_CONFIRMED` are still absent.
 - Source preflight `scripts/check-libreplay-staging-github-env.sh --strict`
   verifies the workflow/environment and fails closed on the missing
-  `PW_STAGING_AUTH_EMAIL` secret without printing secret values.
+  mailbox secrets without printing secret values.
 - No Google/Meta staging callback smoke has been run.
 - No SMTP delivery smoke has been run against a controlled staging mailbox.

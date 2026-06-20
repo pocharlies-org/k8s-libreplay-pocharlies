@@ -120,6 +120,7 @@ Validate by status/key names only:
 ```bash
 scripts/check-libreplay-production-contract.sh
 kubectl -n libreplay-production get externalsecret libreplay-secrets
-kubectl -n libreplay-production get secret libreplay-secrets -o jsonpath='{.data}' | jq 'keys'
+kubectl -n libreplay-production get secret libreplay-secrets \
+  -o go-template='{{range $k, $_ := .data}}{{printf "%s\n" $k}}{{end}}' | sort
 scripts/check-libreplay-production-contract.sh --live
 ```

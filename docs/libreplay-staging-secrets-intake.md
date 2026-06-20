@@ -1,7 +1,7 @@
 # LibrePlay Staging Secrets Intake
 
 Owner: PMO / DevOps / Security
-Date: 2026-06-20
+Date: 2026-06-21
 
 Scope: unblock `ExternalSecret/libreplay-secrets` in namespace `libreplay-staging` by creating the Vault KV v2 record that External Secrets reads as `secret/libreplay/staging`.
 
@@ -13,6 +13,7 @@ Scope: unblock `ExternalSecret/libreplay-secrets` in namespace `libreplay-stagin
 - [x] Do not manually create `Secret/libreplay-secrets` in Kubernetes. Evidence: source of truth remains Vault through `ExternalSecret/libreplay-secrets`.
 - [x] Do not repoint Argo to `staging/overlays/runtime` until strict preflight passes. Evidence: `scripts/check-libreplay-staging-preflight.sh --strict` is blocked while the Vault record is absent.
 - [x] Do not reuse adjacent Skirmshop/other OAuth credentials unless their provider console explicitly includes LibrePlay staging redirect URIs.
+- [x] Require non-secret provider evidence before any Vault write. Evidence: `scripts/check-libreplay-staging-secret-evidence.sh --strict --vault-write` validates callback URI metadata and SMTP sender metadata without printing secrets.
 
 ### Acceptance Criteria
 
@@ -21,6 +22,7 @@ Scope: unblock `ExternalSecret/libreplay-secrets` in namespace `libreplay-stagin
 - [ ] Google OAuth app is LibrePlay-specific or explicitly configured for `https://libreplay-staging.e-dani.com/api/auth/oauth/google/callback`. Evidence required: provider console/config screenshot or metadata, no secret value.
 - [ ] Facebook OAuth app is LibrePlay-specific or explicitly configured for `https://libreplay-staging.e-dani.com/api/auth/oauth/facebook/callback`. Evidence required: provider console/config screenshot or metadata, no secret value.
 - [ ] SMTP credentials are authorized to send `LibrePlay <noreply@libreplay.e-dani.com>`. Evidence required: SMTP provider/domain verification metadata and a staging email smoke after runtime exists.
+- [ ] Controlled staging mailbox exists for GitHub environment secret `PW_STAGING_AUTH_EMAIL`, and plus-addressing/catch-all behavior is confirmed through `PW_STAGING_AUTH_EMAIL_PLUS_CONFIRMED=1`. Evidence required: `scripts/check-libreplay-staging-secret-evidence.sh --strict` passes without printing the mailbox value.
 - [ ] `OAUTH_TOKEN_ENC_KEY` is exactly 64 hex chars. Evidence required: length/regex check only.
 - [ ] `METRICS_BEARER_TOKEN` is a high-entropy random token for VictoriaMetrics scrape auth. Evidence required: existence/length check only.
 - [ ] `scripts/check-libreplay-staging-preflight.sh --strict` passes before enabling runtime overlay.
@@ -31,7 +33,7 @@ Scope: unblock `ExternalSecret/libreplay-secrets` in namespace `libreplay-stagin
 | --- | --- | --- | --- |
 | `DATABASE_URL` | Generated from staging DB user/password and in-cluster service name | PostgreSQL URL for `libreplay-postgres.libreplay-staging.svc.cluster.local:5432` | [ ] |
 | `REDIS_URL` | Generated from in-cluster Redis service name | Redis URL for `libreplay-redis.libreplay-staging.svc.cluster.local:6379` | [ ] |
-| `AUTH_SECRET` | Generate new random secret | At least 16 chars; prefer 32+ random bytes encoded base64url/hex | [ ] |
+| `AUTH_SECRET` | Generate new random secret | At least 32 chars; prefer 32+ random bytes encoded base64url/hex | [ ] |
 | `MINIO_ACCESS_KEY` | Generate new staging-only key | Non-empty; must match MinIO deployment env | [ ] |
 | `MINIO_SECRET_KEY` | Generate new staging-only secret | Non-empty; must match MinIO deployment env | [ ] |
 | `MEILISEARCH_API_KEY` | Generate new staging-only key | Non-empty; must match Meilisearch env | [ ] |
@@ -39,25 +41,25 @@ Scope: unblock `ExternalSecret/libreplay-secrets` in namespace `libreplay-stagin
 | `DB_PASSWORD` | Generate new staging-only password | Non-empty; must match `DATABASE_URL` password | [ ] |
 | `SEED_USER_PASSWORD` | Generate new staging-only password | Non-empty; used only by seed job/demo users | [ ] |
 | `GOOGLE_CLIENT_ID` | Google OAuth provider | Must belong to app authorized for LibrePlay staging callback | [blocked] Missing LibrePlay-specific credential evidence |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth provider | Must pair with `GOOGLE_CLIENT_ID` | [blocked] Missing LibrePlay-specific credential evidence |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth provider | Must pair with `GOOGLE_CLIENT_ID`; at least 16 chars; not placeholder-like | [blocked] Missing LibrePlay-specific credential evidence |
 | `FACEBOOK_CLIENT_ID` | Meta/Facebook OAuth provider | Must belong to app authorized for LibrePlay staging callback | [blocked] Missing LibrePlay-specific credential evidence |
-| `FACEBOOK_CLIENT_SECRET` | Meta/Facebook OAuth provider | Must pair with `FACEBOOK_CLIENT_ID` | [blocked] Missing LibrePlay-specific credential evidence |
+| `FACEBOOK_CLIENT_SECRET` | Meta/Facebook OAuth provider | Must pair with `FACEBOOK_CLIENT_ID`; at least 16 chars; not placeholder-like | [blocked] Missing LibrePlay-specific credential evidence |
 | `OAUTH_TOKEN_ENC_KEY` | Generate new random 32 bytes | Exactly 64 hex chars | [ ] |
 | `SMTP_HOST` | SMTP provider | Hostname for a verified sender/domain | [blocked] Missing LibrePlay-specific SMTP evidence |
 | `SMTP_PORT` | SMTP provider | Positive integer; `465` when `SMTP_SECURE=true` | [blocked] Missing LibrePlay-specific SMTP evidence |
 | `SMTP_USER` | SMTP provider | Non-empty user/API user | [blocked] Missing LibrePlay-specific SMTP evidence |
-| `SMTP_PASSWORD` | SMTP provider | Non-empty secret/API key | [blocked] Missing LibrePlay-specific SMTP evidence |
+| `SMTP_PASSWORD` | SMTP provider | At least 16 chars; not placeholder-like | [blocked] Missing LibrePlay-specific SMTP evidence |
 | `METRICS_BEARER_TOKEN` | Generate new random secret | High-entropy bearer token for `/api/metrics`; never print value | [ ] |
 
 ## Current Evidence
 
-- `scripts/check-libreplay-staging-preflight.sh --strict` on 2026-06-20 22:27 CEST currently reports exactly two blockers: `ExternalSecret/libreplay-secrets` is `Ready=False|SecretSyncedError`, and `Secret/libreplay-secrets` is not materialized.
+- `scripts/check-libreplay-staging-preflight.sh --strict` on 2026-06-21 currently reports exactly two blockers: `ExternalSecret/libreplay-secrets` is `Ready=False|SecretSyncedError`, and `Secret/libreplay-secrets` is not materialized.
 - The same preflight reports Argo `libreplay-staging` as `Synced|Degraded` on path `staging`, validates the staging config posture, confirms no runtime workloads are present, verifies `harbor-pull`, and proves DNS/TLS for `libreplay-staging.e-dani.com`.
 - `ExternalSecret/harbor-pull` in the same namespace is `Ready=True`, so the Vault store and ESO controller are working.
 - ESO logs confirm the exact provider error: `secret/libreplay/staging` does not exist.
 - A Vault metadata read from `vault-0` without an authorized token returned `403 permission denied`; do not bypass Vault access policy.
 - Prior 1Password metadata search found no item named LibrePlay or SauvagePlay for OAuth/SMTP. Current re-check is blocked because the Mac 1Password CLI reports `account is not signed in`.
-- GitHub repo `pocharlies-org/libreplay` currently has no visible `staging` environment via `gh api repos/pocharlies-org/libreplay/environments`; therefore `PW_STAGING_AUTH_EMAIL` is not verified.
+- GitHub repo `pocharlies-org/libreplay` has environment `staging`; the required environment secrets `PW_STAGING_AUTH_EMAIL` and `PW_STAGING_AUTH_EMAIL_PLUS_CONFIRMED` are not verified/present.
 - 1Password metadata has adjacent candidates, but they are not enough to authorize reuse:
   - Google OAuth candidate `oautnh google auth skirmshop app` has `Client ID`, `Client secret`, and `oauth_keys_json`, but title indicates Skirmshop, not LibrePlay.
   - Facebook candidates are login items with username/password/notes, not confirmed app OAuth credentials.
@@ -69,6 +71,21 @@ Use the bootstrap script when approved LibrePlay staging provider values are
 available. It validates shape, generates internal staging-only secrets in memory,
 writes the Vault payload through a temporary `0600` JSON file, and never prints
 secret values.
+
+Validate the non-secret evidence metadata first. This is the full gate, including
+the controlled mailbox for the GitHub environment secret:
+
+```bash
+set +x
+export LIBREPLAY_STAGING_PROVIDER_CALLBACKS_CONFIRMED=1
+export LIBREPLAY_STAGING_GOOGLE_CALLBACK_URI=https://libreplay-staging.e-dani.com/api/auth/oauth/google/callback
+export LIBREPLAY_STAGING_FACEBOOK_CALLBACK_URI=https://libreplay-staging.e-dani.com/api/auth/oauth/facebook/callback
+export LIBREPLAY_STAGING_SMTP_SENDER_CONFIRMED=1
+export LIBREPLAY_STAGING_SMTP_MAIL_FROM='LibrePlay <noreply@libreplay.e-dani.com>'
+export LIBREPLAY_STAGING_AUTH_EMAIL=<controlled-plus-addressable-mailbox>
+export LIBREPLAY_STAGING_AUTH_EMAIL_PLUS_CONFIRMED=1
+scripts/check-libreplay-staging-secret-evidence.sh --strict
+```
 
 Dry-run with provider values already exported:
 
@@ -83,14 +100,20 @@ are confirmed:
 ```bash
 set +x
 export LIBREPLAY_STAGING_PROVIDER_CALLBACKS_CONFIRMED=1
+export LIBREPLAY_STAGING_GOOGLE_CALLBACK_URI=https://libreplay-staging.e-dani.com/api/auth/oauth/google/callback
+export LIBREPLAY_STAGING_FACEBOOK_CALLBACK_URI=https://libreplay-staging.e-dani.com/api/auth/oauth/facebook/callback
 export LIBREPLAY_STAGING_SMTP_SENDER_CONFIRMED=1
+export LIBREPLAY_STAGING_SMTP_MAIL_FROM='LibrePlay <noreply@libreplay.e-dani.com>'
 scripts/bootstrap-libreplay-staging-secrets.sh --write --sync-eso
 ```
 
 The script intentionally refuses write mode without these acknowledgements:
 
 - `LIBREPLAY_STAGING_PROVIDER_CALLBACKS_CONFIRMED=1`
+- `LIBREPLAY_STAGING_GOOGLE_CALLBACK_URI=https://libreplay-staging.e-dani.com/api/auth/oauth/google/callback`
+- `LIBREPLAY_STAGING_FACEBOOK_CALLBACK_URI=https://libreplay-staging.e-dani.com/api/auth/oauth/facebook/callback`
 - `LIBREPLAY_STAGING_SMTP_SENDER_CONFIRMED=1`
+- `LIBREPLAY_STAGING_SMTP_MAIL_FROM='LibrePlay <noreply@libreplay.e-dani.com>'`
 
 ## Safe Push Procedure
 
@@ -110,7 +133,10 @@ set +x
 # export SMTP_USER=...
 # export SMTP_PASSWORD=...
 export LIBREPLAY_STAGING_PROVIDER_CALLBACKS_CONFIRMED=1
+export LIBREPLAY_STAGING_GOOGLE_CALLBACK_URI=https://libreplay-staging.e-dani.com/api/auth/oauth/google/callback
+export LIBREPLAY_STAGING_FACEBOOK_CALLBACK_URI=https://libreplay-staging.e-dani.com/api/auth/oauth/facebook/callback
 export LIBREPLAY_STAGING_SMTP_SENDER_CONFIRMED=1
+export LIBREPLAY_STAGING_SMTP_MAIL_FROM='LibrePlay <noreply@libreplay.e-dani.com>'
 
 scripts/bootstrap-libreplay-staging-secrets.sh --write --sync-eso
 ```
@@ -119,7 +145,8 @@ After push, validate by status and key names only:
 
 ```bash
 kubectl -n libreplay-staging get externalsecret libreplay-secrets
-kubectl -n libreplay-staging get secret libreplay-secrets -o jsonpath='{.data}' | jq 'keys'
+kubectl -n libreplay-staging get secret libreplay-secrets \
+  -o go-template='{{range $k, $_ := .data}}{{printf "%s\n" $k}}{{end}}' | sort
 ./scripts/check-libreplay-staging-preflight.sh --strict
 ```
 
