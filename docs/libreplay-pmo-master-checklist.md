@@ -1,11 +1,27 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-20 08:33 CEST
+Last updated: 2026-06-20 08:56 CEST
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
-Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19/2026-06-20 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork, video MP4/HLS rendition MVP, payment fail-closed/provider selection, site-wide API mutation origin gate, concrete dates/posts/events/groups/paid-content/blog BOLA fixes, Redis-backed abuse/rate limiting, trusted proxy/client-IP source and staging contract gate, demo visual media content, same-origin real map tile proxy, visual media wash/verification gate, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated staging real-provider smoke definitions, staging auth runbook, static staging secret contract, staging runtime overlay scaffold, pending social-email completion, authenticated mobile core coverage and the mobile Discover responsive fix are now green, but production is still blocked by real-provider secrets, real SMTP delivery in staging/prod, approved real PSP integration, full production media delivery/lifecycle/CDN controls, public trusted-proxy runtime proof, DevOps/DR, compliance and observability gaps.
+Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19/2026-06-20 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork, video MP4/HLS rendition MVP, payment fail-closed/provider selection, site-wide API mutation origin gate, concrete dates/posts/events/groups/paid-content/blog BOLA fixes, Redis-backed abuse/rate limiting, trusted proxy/client-IP source and staging contract gate, demo visual media content, same-origin real map tile proxy, visual media wash/verification gate, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated staging real-provider smoke definitions, staging auth runbook, static staging secret contract, staging runtime overlay scaffold, staging secrets intake, pending social-email completion, authenticated mobile core coverage and the mobile Discover responsive fix are now green, but production is still blocked by real-provider secrets, real SMTP delivery in staging/prod, approved real PSP integration, full production media delivery/lifecycle/CDN controls, public trusted-proxy runtime proof, DevOps/DR, compliance and observability gaps.
+
+## 2026-06-20 PMO Iteration - Staging Secrets Intake Gate
+
+- [x] Live staging blocker was revalidated. Evidence: `scripts/check-libreplay-staging-preflight.sh --strict` reports only `ExternalSecret/libreplay-secrets` `Ready=False|SecretSyncedError` and absent `Secret/libreplay-secrets`; `harbor-pull`, DNS and TLS remain OK.
+- [x] Safe 1Password metadata discovery was performed without secret values. Evidence: OpenClaw/1Password status succeeded; no item named LibrePlay/SauvagePlay was found; adjacent candidates were inspected by item metadata and field labels only.
+- [x] Staging secret intake now exists. Evidence: [libreplay-staging-secrets-intake.md](./libreplay-staging-secrets-intake.md) maps all 18 required Vault fields, source expectations, validation rules, blocked provider fields and a no-echo Vault push procedure.
+- [blocked] Provider-specific credentials remain missing. Evidence: Google OAuth candidate metadata points to a Skirmshop-titled app, Facebook candidates are login items rather than proven app credentials, and SMTP-adjacent Resend/Mailrelay/Gmail metadata lacks LibrePlay sender/domain evidence.
+- [blocked] Staging runtime workloads must remain unsynced. Evidence: `secret/libreplay/staging` is still absent/incomplete, so `staging/overlays/runtime` must not be promoted until ESO materializes the Secret and strict preflight passes.
+
+## 2026-06-20 PMO Iteration - PSP Transaction Ledger Scaffold
+
+- [x] Payments/PSP subagent completed a read-only audit. Evidence: Poincare verified no Stripe SDK/env exists, `PAYMENT_PROVIDER` remains `disabled|mock`, mock routes are LAN/test guarded, `/api/payments/webhook` fails closed and Stripe policy blocks adult/pay-per-view assumptions without written approval.
+- [x] Provider-neutral payment ledger scaffold exists in source. Evidence: source worktree adds `PaymentTransactionKind` and `PaymentTransaction` with unique provider reference and webhook event keys in `packages/db/prisma/schema.prisma`, plus migration `20260620090000_payment_transaction_ledger`.
+- [x] Web domain helper exists without activating a PSP. Evidence: source worktree adds `apps/web/src/lib/payment-transactions.ts`, which creates pending transactions and completes them only from provider webhook evidence while returning duplicate webhook events idempotently.
+- [x] Payment fail-closed behavior remains intact. Evidence: `pnpm --filter @libreplay/media test -- src/__tests__/payment-provider.test.ts` passed `4/4`; `pnpm --filter @libreplay/config test -- src/__tests__/env.test.ts` passed `15/15`; web payment/middleware/ledger tests passed `9/9`; `PAYMENT_PROVIDER` still does not accept Stripe.
+- [blocked] Stripe is not activated. Evidence: official Stripe restricted-business documentation lists adult services, pay-per-view adult features, adult live chat and mature sexual content as prohibited/restricted; LibrePlay needs written approval or an adult-friendly PSP decision before live payments.
 
 ## 2026-06-20 PMO Iteration - Trusted Proxy Client IP Gate
 

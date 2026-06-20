@@ -1,7 +1,7 @@
 # LibrePlay Staging Auth Runbook
 
 Status: `BLOCKED-BY-REAL-SECRETS`
-Last updated: 2026-06-20 08:33 CEST
+Last updated: 2026-06-20 08:56 CEST
 
 ## Objective
 
@@ -23,6 +23,9 @@ a separate staging environment before production can be considered.
   `TRUSTED_CLIENT_IP_HEADER=cf-connecting-ip`.
 - [blocked] Real provider evidence exists. Blocker: Google, Meta and SMTP
   staging credentials are not present in the current runtime.
+- [x] Secret intake exists. Evidence:
+  [libreplay-staging-secrets-intake.md](./libreplay-staging-secrets-intake.md)
+  maps the required Vault fields, validation rules and no-echo push procedure.
 
 ### Acceptance Criteria
 
@@ -127,6 +130,9 @@ not print their values:
 - `SMTP_PORT`
 - `SMTP_USER`
 - `SMTP_PASSWORD`
+
+The field-level source and validation checklist lives in
+[libreplay-staging-secrets-intake.md](./libreplay-staging-secrets-intake.md).
 
 ## Verification Commands
 
