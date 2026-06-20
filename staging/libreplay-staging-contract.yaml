@@ -72,8 +72,8 @@ metadata:
 data:
   NODE_ENV: production
   DEPLOYMENT_MODE: staging
-  APP_BASE_URL: https://staging.libreplay.example.com
-  AUTH_URL: https://staging.libreplay.example.com
+  APP_BASE_URL: https://libreplay-staging.e-dani.com
+  AUTH_URL: https://libreplay-staging.e-dani.com
   AUTH_TRUST_HOST: "true"
   DEFAULT_LOCALE: es
   SUPPORTED_LOCALES: es,en,fr,de,pt
@@ -83,7 +83,7 @@ data:
   RATE_LIMIT_FAIL_MODE: closed
   RATE_LIMIT_TIMEOUT_MS: "250"
   AUTH_EMAIL_PROVIDER: smtp
-  MAIL_FROM: LibrePlay <noreply@libreplay.example.com>
+  MAIL_FROM: LibrePlay <noreply@libreplay.e-dani.com>
   SMTP_SECURE: "true"
   ENABLE_LAN_DEMO_LOGIN: "false"
   LAN_DEMO_ALLOWED_HOSTS: ""

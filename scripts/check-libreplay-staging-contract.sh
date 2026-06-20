@@ -1,7 +1,16 @@
 #!/usr/bin/env sh
 set -eu
 
+mode="live"
+manifest="staging/libreplay-staging-contract.yaml"
 namespace="${1:-${NAMESPACE:-libreplay-staging}}"
+
+if [ "${1:-}" = "--static" ]; then
+  mode="static"
+  manifest="${2:-$manifest}"
+  namespace="${NAMESPACE:-libreplay-staging}"
+fi
+
 secret_name="${SECRET_NAME:-libreplay-secrets}"
 config_name="${CONFIG_NAME:-libreplay-config}"
 
@@ -14,6 +23,7 @@ MINIO_SECRET_KEY
 MEILISEARCH_API_KEY
 DB_USER
 DB_PASSWORD
+SEED_USER_PASSWORD
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
 FACEBOOK_CLIENT_ID
@@ -47,6 +57,74 @@ info() {
   printf 'OK: %s\n' "$*"
 }
 
+yaml_value() {
+  key="$1"
+  awk -v key="$key" '
+    $1 == key ":" {
+      sub("^[^:]*:[[:space:]]*", "")
+      gsub(/^"|"$/, "")
+      print
+    }
+  ' "$manifest" | tail -n 1
+}
+
+check_urls_and_mail() {
+  app_base_url="$1"
+  auth_url="$2"
+  mail_from="$3"
+
+  case "$app_base_url" in
+    https://*) ;;
+    *) fail "APP_BASE_URL must be https for real-provider staging" ;;
+  esac
+
+  case "$auth_url" in
+    https://*) ;;
+    *) fail "AUTH_URL must be https for real-provider staging" ;;
+  esac
+
+  case "$app_base_url $auth_url" in
+    *example.com*) fail "staging OAuth URLs must not use example.com placeholders" ;;
+    *".lan.e-dani.com"*) fail "staging OAuth URLs must not use LAN-only hostnames" ;;
+    *".local"*) fail "staging OAuth URLs must not use local-only hostnames" ;;
+  esac
+
+  case "$mail_from" in
+    *"@libreplay.local"*) fail "MAIL_FROM must not use @libreplay.local in staging" ;;
+    *example.com*) fail "MAIL_FROM must not use example.com placeholder domains" ;;
+  esac
+}
+
+if [ "$mode" = "static" ]; then
+  kubectl apply --dry-run=client -f "$manifest" >/dev/null
+
+  for key in $required_secret_keys; do
+    if ! grep -Eq "^[[:space:]]*-[[:space:]]*secretKey:[[:space:]]*${key}[[:space:]]*$" "$manifest"; then
+      fail "static contract missing ExternalSecret key ${key}"
+    fi
+  done
+  info "static contract declares required ExternalSecret key names; values were not printed"
+
+  for pair in $required_config_values; do
+    key="${pair%%=*}"
+    expected="${pair#*=}"
+    actual="$(yaml_value "$key")"
+    if [ "$actual" != "$expected" ]; then
+      fail "static contract config ${key} expected ${expected}, got ${actual:-<empty>}"
+    fi
+  done
+  info "static contract required staging config values match"
+
+  check_urls_and_mail "$(yaml_value APP_BASE_URL)" "$(yaml_value AUTH_URL)" "$(yaml_value MAIL_FROM)"
+  info "static staging URLs and MAIL_FROM look compatible with real providers"
+  info "static contract check complete for ${manifest}"
+  exit 0
+fi
+
+if ! kubectl get namespace "$namespace" >/dev/null 2>&1; then
+  fail "namespace ${namespace} does not exist; apply or sync the staging contract before live validation"
+fi
+
 kubectl -n "$namespace" get secret "$secret_name" \
   -o go-template='{{range $k, $v := .data}}{{printf "%s\n" $k}}{{end}}' \
   | sort > "$tmp_keys"
@@ -71,24 +149,6 @@ info "required staging config values match"
 app_base_url="$(kubectl -n "$namespace" get configmap "$config_name" -o 'jsonpath={.data.APP_BASE_URL}')"
 auth_url="$(kubectl -n "$namespace" get configmap "$config_name" -o 'jsonpath={.data.AUTH_URL}')"
 mail_from="$(kubectl -n "$namespace" get configmap "$config_name" -o 'jsonpath={.data.MAIL_FROM}')"
-
-case "$app_base_url" in
-  https://*) ;;
-  *) fail "APP_BASE_URL must be https for real-provider staging" ;;
-esac
-
-case "$auth_url" in
-  https://*) ;;
-  *) fail "AUTH_URL must be https for real-provider staging" ;;
-esac
-
-case "$app_base_url $auth_url" in
-  *".lan.e-dani.com"*) fail "staging OAuth URLs must not use LAN-only hostnames" ;;
-esac
-
-case "$mail_from" in
-  *"@libreplay.local"*) fail "MAIL_FROM must not use @libreplay.local in staging" ;;
-esac
-
+check_urls_and_mail "$app_base_url" "$auth_url" "$mail_from"
 info "staging URLs and MAIL_FROM look compatible with real providers"
 info "contract check complete for namespace ${namespace}"

@@ -192,7 +192,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [ ] Enable real-provider staging for Google/Facebook.
   Evidence required: Google and Meta app configuration, redirect URI validation, secrets in staging, `USE_MOCK_OAUTH=false`, real-provider smoke tests, and support runbook for provider/app-review failure modes.
 - [x] Add gated real-provider staging smoke definition.
-  Evidence: `PW_STAGING_REAL_AUTH=1` exposes project `staging-real-auth`; it asserts Google redirects to `accounts.google.com`, Facebook redirects to `facebook.com`, and forgot-password drains `authEmail` without failures.
+  Evidence: `PW_STAGING_REAL_AUTH=1` exposes project `staging-real-auth`; it asserts Google redirects to `accounts.google.com`, Facebook redirects to `facebook.com`, and registration verification email drains `authEmail` without failures.
 
 ### P1 - Payments
 
