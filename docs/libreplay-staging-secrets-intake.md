@@ -17,11 +17,12 @@ Scope: unblock `ExternalSecret/libreplay-secrets` in namespace `libreplay-stagin
 ### Acceptance Criteria
 
 - [ ] Vault KV v2 record exists at `secret/libreplay/staging`. Evidence required: ESO status `Ready=True` for `ExternalSecret/libreplay-secrets`.
-- [ ] The materialized Kubernetes Secret contains the 18 required keys below. Evidence required: key-name-only check, never values.
+- [ ] The materialized Kubernetes Secret contains the 19 required keys below. Evidence required: key-name-only check, never values.
 - [ ] Google OAuth app is LibrePlay-specific or explicitly configured for `https://libreplay-staging.e-dani.com/api/auth/oauth/google/callback`. Evidence required: provider console/config screenshot or metadata, no secret value.
 - [ ] Facebook OAuth app is LibrePlay-specific or explicitly configured for `https://libreplay-staging.e-dani.com/api/auth/oauth/facebook/callback`. Evidence required: provider console/config screenshot or metadata, no secret value.
 - [ ] SMTP credentials are authorized to send `LibrePlay <noreply@libreplay.e-dani.com>`. Evidence required: SMTP provider/domain verification metadata and a staging email smoke after runtime exists.
 - [ ] `OAUTH_TOKEN_ENC_KEY` is exactly 64 hex chars. Evidence required: length/regex check only.
+- [ ] `METRICS_BEARER_TOKEN` is a high-entropy random token for VictoriaMetrics scrape auth. Evidence required: existence/length check only.
 - [ ] `scripts/check-libreplay-staging-preflight.sh --strict` passes before enabling runtime overlay.
 
 ## Required Vault Fields
@@ -46,6 +47,7 @@ Scope: unblock `ExternalSecret/libreplay-secrets` in namespace `libreplay-stagin
 | `SMTP_PORT` | SMTP provider | Positive integer; `465` when `SMTP_SECURE=true` | [blocked] Missing LibrePlay-specific SMTP evidence |
 | `SMTP_USER` | SMTP provider | Non-empty user/API user | [blocked] Missing LibrePlay-specific SMTP evidence |
 | `SMTP_PASSWORD` | SMTP provider | Non-empty secret/API key | [blocked] Missing LibrePlay-specific SMTP evidence |
+| `METRICS_BEARER_TOKEN` | Generate new random secret | High-entropy bearer token for `/api/metrics`; never print value | [ ] |
 
 ## Current Evidence
 
@@ -82,6 +84,7 @@ set +x
 # export SMTP_PORT=...
 # export SMTP_USER=...
 # export SMTP_PASSWORD=...
+# export METRICS_BEARER_TOKEN=...
 
 vault kv put secret/libreplay/staging \
   DATABASE_URL="$DATABASE_URL" \
@@ -101,7 +104,8 @@ vault kv put secret/libreplay/staging \
   SMTP_HOST="$SMTP_HOST" \
   SMTP_PORT="$SMTP_PORT" \
   SMTP_USER="$SMTP_USER" \
-  SMTP_PASSWORD="$SMTP_PASSWORD"
+  SMTP_PASSWORD="$SMTP_PASSWORD" \
+  METRICS_BEARER_TOKEN="$METRICS_BEARER_TOKEN"
 ```
 
 After push, validate by status and key names only:

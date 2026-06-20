@@ -32,6 +32,28 @@ reject_pattern() {
   info "$message"
 }
 
+reject_optional_env_secret_ref() {
+  key="$1"
+  if awk -v key="$key" '
+    $0 ~ "^[[:space:]]*-[[:space:]]*name:[[:space:]]*" key "[[:space:]]*$" {
+      in_env = 1
+      next
+    }
+    in_env && $0 ~ "^[[:space:]]*-[[:space:]]*name:" {
+      in_env = 0
+    }
+    in_env && $0 ~ "optional:[[:space:]]*true" {
+      found = 1
+    }
+    END {
+      exit found ? 0 : 1
+    }
+  ' "$rendered"; then
+    fail "${key} env secret ref is optional in staging"
+  fi
+  info "${key} env secret ref is required in staging"
+}
+
 kubectl kustomize "$overlay" > "$rendered"
 kubectl apply --dry-run=client -f "$rendered" >/dev/null
 info "staging runtime overlay renders and passes client dry-run"
@@ -72,9 +94,17 @@ for key in \
   MEILISEARCH_API_KEY DB_USER DB_PASSWORD SEED_USER_PASSWORD \
   GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET FACEBOOK_CLIENT_ID \
   FACEBOOK_CLIENT_SECRET OAUTH_TOKEN_ENC_KEY SMTP_HOST SMTP_PORT \
-  SMTP_USER SMTP_PASSWORD
+  SMTP_USER SMTP_PASSWORD METRICS_BEARER_TOKEN
 do
   require_pattern "secretKey:[[:space:]]*${key}[[:space:]]*$" "ExternalSecret declares ${key}"
+done
+
+for key in \
+  GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET FACEBOOK_CLIENT_ID \
+  FACEBOOK_CLIENT_SECRET OAUTH_TOKEN_ENC_KEY SMTP_HOST SMTP_PORT \
+  SMTP_USER SMTP_PASSWORD METRICS_BEARER_TOKEN
+do
+  reject_optional_env_secret_ref "$key"
 done
 
 reject_pattern 'DEPLOYMENT_MODE:[[:space:]]*lan-demo' 'DEPLOYMENT_MODE is not LAN demo'
@@ -89,7 +119,6 @@ reject_pattern 'libreplay\.lan\.e-dani\.com' 'LAN host is absent from staging ru
 reject_pattern 'libreplay_lan' 'LAN database name is absent from staging runtime'
 reject_pattern 'key:[[:space:]]*secret/libreplay[[:space:]]*$' 'base LAN Vault path is absent'
 reject_pattern 'dataFrom:' 'ExternalSecret does not bulk-import the LAN secret shape'
-reject_pattern 'optional:[[:space:]]*true' 'provider and SMTP secret refs are not optional in staging'
 reject_pattern 'ClientIP\(' 'staging ingress is not LAN-IP gated'
 reject_pattern 'sso-chain' 'staging app auth is not hidden behind the LAN SSO middleware'
 

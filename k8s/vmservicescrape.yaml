@@ -1,0 +1,18 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: libreplay-web
+  namespace: libreplay
+spec:
+  selector:
+    matchLabels:
+      app: libreplay-web
+  endpoints:
+    - port: http
+      path: /api/metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      bearerTokenSecret:
+        name: libreplay-secrets
+        key: METRICS_BEARER_TOKEN
+        optional: true

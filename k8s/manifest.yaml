@@ -36,7 +36,7 @@ spec:
 # Optional provider/email keys stay empty/absent in LAN demo until real providers are enabled:
 # GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FACEBOOK_CLIENT_ID,
 # FACEBOOK_CLIENT_SECRET, OAUTH_TOKEN_ENC_KEY, SMTP_HOST, SMTP_PORT,
-# SMTP_USER, SMTP_PASSWORD.
+# SMTP_USER, SMTP_PASSWORD, METRICS_BEARER_TOKEN.
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -340,7 +340,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: payment-ledger-20260620-0917
+        libreplay.e-dani.com/config-rollout: observability-20260620-0957
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -348,7 +348,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-df168914672d@sha256:c75d9ef07b1648e9f1c307d090c0777239bfecb81b7b0c8e8db442f6f44376c2
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-2aba2684d4a4@sha256:554f61bc5fb45324b531e9864686075bc16e2277b2ac7594125e32d7b8d08657
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -383,12 +383,23 @@ spec:
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SMTP_USER, optional: true } }
             - name: SMTP_PASSWORD
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SMTP_PASSWORD, optional: true } }
+            - name: METRICS_BEARER_TOKEN
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: METRICS_BEARER_TOKEN, optional: true } }
           resources:
             requests: { cpu: 100m, memory: 256Mi }
             limits: { memory: 1Gi }
           readinessProbe:
-            httpGet: { path: /api/health, port: 3000 }
+            httpGet: { path: /api/health/deps, port: 3000 }
             initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /api/health, port: 3000 }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
 
 # ── LibrePlay worker (BullMQ media processing) ────────────────────────────────
 ---
@@ -407,7 +418,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: payment-ledger-20260620-0917
+        libreplay.e-dani.com/config-rollout: observability-20260620-0957
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -415,7 +426,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-df168914672d@sha256:91d9f9c62c78c47f9899d63b4d309b8ae67e70ed3cabd547015d7f2524b4b158
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-2aba2684d4a4@sha256:8955ceb44849e2f386cd1490e68a5c0e04db68982a55a8e1f27c68a8dfaa7b8e
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
@@ -731,7 +742,10 @@ spec:
 ---
 apiVersion: v1
 kind: Service
-metadata: { name: libreplay-web, namespace: libreplay }
+metadata:
+  name: libreplay-web
+  namespace: libreplay
+  labels: { app: libreplay-web }
 spec:
   selector: { app: libreplay-web }
   ports: [{ name: http, port: 80, targetPort: 3000 }]
