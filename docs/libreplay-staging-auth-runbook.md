@@ -1,7 +1,7 @@
 # LibrePlay Staging Auth Runbook
 
 Status: `BLOCKED-BY-REAL-SECRETS`
-Last updated: 2026-06-20 07:49 CEST
+Last updated: 2026-06-20 08:33 CEST
 
 ## Objective
 
@@ -18,7 +18,9 @@ a separate staging environment before production can be considered.
   Argo app and Vault path.
 - [x] Fail closed. Evidence: `DEPLOYMENT_MODE=staging` requires
   `USE_MOCK_OAUTH=false`, real provider secrets, `OAUTH_TOKEN_ENC_KEY`,
-  `AUTH_EMAIL_PROVIDER=smtp`, SMTP host/port and non-local `MAIL_FROM`.
+  `AUTH_EMAIL_PROVIDER=smtp`, SMTP host/port, non-local `MAIL_FROM`,
+  Redis-backed fail-closed rate limiting, `TRUST_PROXY_CLIENT_IP=true` and
+  `TRUSTED_CLIENT_IP_HEADER=cf-connecting-ip`.
 - [blocked] Real provider evidence exists. Blocker: Google, Meta and SMTP
   staging credentials are not present in the current runtime.
 
@@ -51,14 +53,16 @@ a separate staging environment before production can be considered.
 - [x] Staging runtime overlay is renderable but not live. Evidence:
   `staging/overlays/runtime` renders the full workload set into `libreplay-staging`
   with real-provider auth posture, required OAuth/SMTP secret refs, public
-  `traefik-edge` ingress, external-dns annotations and public TLSStore; it is
-  intentionally not the Argo target until real secrets/DNS are present.
+  `traefik-edge` ingress, Cloudflare source allowlist middleware, external-dns
+  annotations and public TLSStore; it is intentionally not the Argo target until
+  real secrets/DNS are present.
 - [x] Static runtime guard prevents LAN config drift. Evidence:
   `scripts/check-libreplay-staging-runtime.sh` renders `staging/overlays/runtime`,
   performs client dry-run and rejects LAN host, LAN DB name, mock OAuth,
   console auth email, mock payments, optional OAuth/SMTP secret refs,
-  ClientIP-only ingress, missing `traefik-edge`/external-dns/public TLS posture
-  and SSO middleware.
+  ClientIP-only ingress, missing `traefik-edge`/external-dns/public TLS posture,
+  SSO middleware, missing Cloudflare source allowlist, `TRUST_PROXY_CLIENT_IP=false`
+  and `TRUSTED_CLIENT_IP_HEADER=x-forwarded-for`.
 - [blocked] Vault/ExternalSecret exposes the required key names without
   printing values. Blocker: live `ExternalSecret/libreplay-secrets` is
   `Ready=False` with `SecretSyncedError` because provider data is absent.
@@ -69,6 +73,7 @@ a separate staging environment before production can be considered.
   live `ConfigMap/libreplay-config` exists in `libreplay-staging`; static
   contract and runtime checks require `DEPLOYMENT_MODE=staging`,
   `NODE_ENV=production`, `USE_MOCK_OAUTH=false`, `AUTH_EMAIL_PROVIDER=smtp`,
+  `TRUST_PROXY_CLIENT_IP=true`, `TRUSTED_CLIENT_IP_HEADER=cf-connecting-ip`
   and HTTPS `APP_BASE_URL`/`AUTH_URL`.
 - [ ] Google OAuth start redirects to `accounts.google.com` from staging.
   Evidence required: gated Playwright staging smoke passes.
@@ -92,6 +97,12 @@ Before switching Argo from `staging` to `staging/overlays/runtime`, the
 `traefik-edge` Helm values must watch namespace `libreplay-staging`; otherwise
 the runtime `IngressRoute` can render correctly but remain invisible to the
 public edge controller.
+
+The future runtime `IngressRoute` must stay behind Cloudflare. The runtime
+overlay attaches `Middleware/libreplay-staging-cloudflare-only`, sourced from the
+current Cloudflare IPv4/IPv6 ranges, and the app trusts only
+`cf-connecting-ip` for public client attribution. Do not replace this with raw
+`x-forwarded-for` unless the edge trust boundary is redesigned and re-audited.
 
 ## Required Secret Key Names
 
