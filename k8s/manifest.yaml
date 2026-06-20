@@ -120,7 +120,7 @@ spec:
             - { name: data, mountPath: /var/lib/postgresql/data }
           resources:
             requests: { cpu: 100m, memory: 128Mi }
-            limits:   { memory: 1Gi }
+            limits: { memory: 1Gi }
           readinessProbe:
             exec: { command: [sh, -lc, 'pg_isready -U "$POSTGRES_USER" -d libreplay_lan'] }
             initialDelaySeconds: 5
@@ -158,7 +158,7 @@ spec:
           command: [redis-server, --appendonly, "yes"]
           resources:
             requests: { cpu: 20m, memory: 32Mi }
-            limits:   { memory: 256Mi }
+            limits: { memory: 256Mi }
           readinessProbe:
             exec: { command: [redis-cli, ping] }
 ---
@@ -206,7 +206,7 @@ spec:
             - { name: data, mountPath: /meili_data }
           resources:
             requests: { cpu: 100m, memory: 256Mi }
-            limits:   { memory: 2Gi }
+            limits: { memory: 2Gi }
           readinessProbe:
             httpGet: { path: /health, port: 7700 }
             initialDelaySeconds: 10
@@ -263,7 +263,7 @@ spec:
             - { name: data, mountPath: /data }
           resources:
             requests: { cpu: 100m, memory: 256Mi }
-            limits:   { memory: 1Gi }
+            limits: { memory: 1Gi }
           readinessProbe:
             httpGet: { path: /minio/health/live, port: 9000 }
             initialDelaySeconds: 10
@@ -318,7 +318,7 @@ spec:
               mc mb -p "local/${MINIO_BUCKET}" || true
           resources:
             requests: { cpu: 20m, memory: 64Mi }
-            limits:   { memory: 256Mi }
+            limits: { memory: 256Mi }
 
 # ── LibreReplay web (stateless) ───────────────────────────────────────────────
 ---
@@ -383,7 +383,7 @@ spec:
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SMTP_PASSWORD, optional: true } }
           resources:
             requests: { cpu: 100m, memory: 256Mi }
-            limits:   { memory: 1Gi }
+            limits: { memory: 1Gi }
           readinessProbe:
             httpGet: { path: /api/health, port: 3000 }
             initialDelaySeconds: 20
@@ -439,7 +439,7 @@ spec:
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SMTP_PASSWORD, optional: true } }
           resources:
             requests: { cpu: 100m, memory: 256Mi }
-            limits:   { memory: 1Gi }
+            limits: { memory: 1Gi }
 ---
 apiVersion: batch/v1
 kind: Job
@@ -481,7 +481,7 @@ spec:
               fi
           resources:
             requests: { cpu: 20m, memory: 64Mi }
-            limits:   { memory: 256Mi }
+            limits: { memory: 256Mi }
 ---
 apiVersion: batch/v1
 kind: Job
@@ -511,7 +511,7 @@ spec:
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
           resources:
             requests: { cpu: 50m, memory: 128Mi }
-            limits:   { memory: 512Mi }
+            limits: { memory: 512Mi }
 ---
 apiVersion: batch/v1
 kind: Job
@@ -541,7 +541,7 @@ spec:
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
           resources:
             requests: { cpu: 50m, memory: 128Mi }
-            limits:   { memory: 512Mi }
+            limits: { memory: 512Mi }
 ---
 apiVersion: batch/v1
 kind: Job
@@ -571,7 +571,7 @@ spec:
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
           resources:
             requests: { cpu: 50m, memory: 128Mi }
-            limits:   { memory: 512Mi }
+            limits: { memory: 512Mi }
 ---
 apiVersion: batch/v1
 kind: Job
@@ -603,7 +603,7 @@ spec:
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SEED_USER_PASSWORD } }
           resources:
             requests: { cpu: 50m, memory: 128Mi }
-            limits:   { memory: 512Mi }
+            limits: { memory: 512Mi }
 ---
 apiVersion: batch/v1
 kind: Job
@@ -649,7 +649,7 @@ spec:
               value: "http://10.43.80.147:9002"
           resources:
             requests: { cpu: 100m, memory: 256Mi }
-            limits:   { memory: 1Gi }
+            limits: { memory: 1Gi }
 ---
 apiVersion: batch/v1
 kind: Job
@@ -695,7 +695,7 @@ spec:
               value: "http://10.43.80.147:9002"
           resources:
             requests: { cpu: 100m, memory: 256Mi }
-            limits:   { memory: 1Gi }
+            limits: { memory: 1Gi }
 ---
 apiVersion: v1
 kind: Service
