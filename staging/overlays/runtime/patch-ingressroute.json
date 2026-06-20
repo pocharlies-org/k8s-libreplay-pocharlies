@@ -1,6 +1,15 @@
 - op: replace
   path: /metadata/name
   value: libreplay-staging
+- op: add
+  path: /metadata/annotations
+  value:
+    external-dns.alpha.kubernetes.io/hostname: libreplay-staging.e-dani.com
+    external-dns.alpha.kubernetes.io/target: 57.129.17.172
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+- op: add
+  path: /spec/ingressClassName
+  value: traefik-edge
 - op: replace
   path: /spec/routes
   value:
@@ -10,3 +19,7 @@
       services:
         - name: libreplay-web
           port: 80
+- op: replace
+  path: /spec/tls
+  value:
+    store: { name: default, namespace: traefik-edge }

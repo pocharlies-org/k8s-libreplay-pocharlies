@@ -98,6 +98,23 @@ spec:
       remoteRef: { key: infra/harbor/ci-robot, property: registry }
 ---
 apiVersion: v1
+kind: Service
+metadata:
+  name: libreplay-staging-dns-preflight
+  namespace: libreplay-staging
+  labels:
+    app.kubernetes.io/name: libreplay
+    libreplay.e-dani.com/environment: staging
+    libreplay.e-dani.com/purpose: dns-preflight
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: libreplay-staging.e-dani.com
+    external-dns.alpha.kubernetes.io/target: 57.129.17.172
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: staging-dns-placeholder.e-dani.com
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: libreplay-config

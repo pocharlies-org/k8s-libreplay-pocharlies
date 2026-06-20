@@ -1,7 +1,7 @@
 # LibrePlay Staging Auth Runbook
 
 Status: `BLOCKED-BY-REAL-SECRETS`
-Last updated: 2026-06-20 07:28 CEST
+Last updated: 2026-06-20 07:40 CEST
 
 ## Objective
 
@@ -35,19 +35,26 @@ a separate staging environment before production can be considered.
   credentials. Evidence: `ExternalSecret/harbor-pull` targets
   `infra/harbor/ci-robot` and templates a `kubernetes.io/dockerconfigjson`
   Secret.
+- [x] Staging DNS preflight contract is declared without enabling runtime
+  workloads. Evidence: `Service/libreplay-staging-dns-preflight` is an
+  `ExternalName` annotated for external-dns with hostname
+  `libreplay-staging.e-dani.com`, target `57.129.17.172` and
+  `cloudflare-proxied=true`; it exists only to let external-dns publish the
+  record before the runtime overlay is synced.
 - [x] Static staging auth contract exists without enabling live staging.
   Evidence: `staging/libreplay-staging-contract.yaml` contains only Namespace,
   `ExternalSecret` and `ConfigMap`; it does not define workloads or ingress.
 - [x] Staging runtime overlay is renderable but not live. Evidence:
   `staging/overlays/runtime` renders the full workload set into `libreplay-staging`
-  with real-provider auth posture, required OAuth/SMTP secret refs and staging
-  ingress; it is intentionally not the Argo target until real secrets/DNS are
-  present.
+  with real-provider auth posture, required OAuth/SMTP secret refs, public
+  `traefik-edge` ingress, external-dns annotations and public TLSStore; it is
+  intentionally not the Argo target until real secrets/DNS are present.
 - [x] Static runtime guard prevents LAN config drift. Evidence:
   `scripts/check-libreplay-staging-runtime.sh` renders `staging/overlays/runtime`,
   performs client dry-run and rejects LAN host, LAN DB name, mock OAuth,
   console auth email, mock payments, optional OAuth/SMTP secret refs,
-  ClientIP-only ingress and SSO middleware.
+  ClientIP-only ingress, missing `traefik-edge`/external-dns/public TLS posture
+  and SSO middleware.
 - [blocked] Vault/ExternalSecret exposes the required key names without
   printing values. Blocker: live `ExternalSecret/libreplay-secrets` is
   `Ready=False` with `SecretSyncedError` because provider data is absent.
@@ -69,6 +76,18 @@ a separate staging environment before production can be considered.
   `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 npx playwright test`.
 - [ ] Staging preflight is strict-green before runtime sync. Evidence required:
   `scripts/check-libreplay-staging-preflight.sh --strict`.
+
+## DNS And Public Edge Notes
+
+`external-dns` in this cluster watches Services, Ingresses and Traefik proxy
+resources, but not `DNSEndpoint` CRDs. The staging contract therefore uses a
+DNS-only `ExternalName` Service for preflight. The future runtime overlay then
+uses the same hostname/target annotations on the `IngressRoute`.
+
+Before switching Argo from `staging` to `staging/overlays/runtime`, the
+`traefik-edge` Helm values must watch namespace `libreplay-staging`; otherwise
+the runtime `IngressRoute` can render correctly but remain invisible to the
+public edge controller.
 
 ## Required Secret Key Names
 
@@ -158,6 +177,10 @@ email-verification job to drain without failures.
 - `ExternalSecret/harbor-pull` is now part of the staging contract and should
   materialize from `infra/harbor/ci-robot`; verify it with the preflight before
   runtime sync.
+- DNS-only `Service/libreplay-staging-dns-preflight` must be live and external-dns
+  must publish `libreplay-staging.e-dani.com` before TLS/smoke checks can pass.
+- `traefik-edge` must include `libreplay-staging` in its watched namespaces
+  before the runtime `IngressRoute` can be considered public-edge ready.
 - Runtime overlay exists at `staging/overlays/runtime`, but it is intentionally not wired
   into Argo until real secrets, DNS/TLS and pull-secret handling are validated.
 - Staging DNS/TLS for `libreplay-staging.e-dani.com` has not been proven live.

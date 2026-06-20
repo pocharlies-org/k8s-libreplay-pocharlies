@@ -119,6 +119,18 @@ if [ "$mode" = "static" ]; then
   done
   info "static contract declares harbor-pull ExternalSecret without printing registry credentials"
 
+  for pattern in \
+    'name:[[:space:]]*libreplay-staging-dns-preflight' \
+    'external-dns\.alpha\.kubernetes\.io/hostname:[[:space:]]*libreplay-staging\.e-dani\.com' \
+    'external-dns\.alpha\.kubernetes\.io/target:[[:space:]]*57\.129\.17\.172' \
+    'external-dns\.alpha\.kubernetes\.io/cloudflare-proxied:[[:space:]]*"true"' \
+    'type:[[:space:]]*ExternalName'; do
+    if ! grep -Eq "$pattern" "$manifest"; then
+      fail "static contract missing staging DNS preflight pattern: ${pattern}"
+    fi
+  done
+  info "static contract declares DNS-only staging preflight service for external-dns"
+
   for pair in $required_config_values; do
     key="${pair%%=*}"
     expected="${pair#*=}"

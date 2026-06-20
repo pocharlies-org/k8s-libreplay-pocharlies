@@ -75,11 +75,26 @@ else
   block "namespace ${namespace} is missing"
 fi
 
-runtime_resources="$(kubectl -n "$namespace" get deploy,sts,job,ingressroute,svc,pod --ignore-not-found -o name 2>/dev/null || true)"
+runtime_resources="$(kubectl -n "$namespace" get deploy,sts,job,ingressroute,svc,pod --ignore-not-found -o name 2>/dev/null \
+  | grep -Fxv 'service/libreplay-staging-dns-preflight' || true)"
 if [ -n "$runtime_resources" ]; then
   fail "runtime resources exist in ${namespace}; keep staging contract-only until preflight is strict-green"
 else
   ok "no runtime workloads/services/ingress are present in ${namespace}"
+fi
+
+if kubectl -n "$namespace" get service libreplay-staging-dns-preflight >/dev/null 2>&1; then
+  dns_service_type="$(kubectl -n "$namespace" get service libreplay-staging-dns-preflight -o 'jsonpath={.spec.type}')"
+  dns_host="$(kubectl -n "$namespace" get service libreplay-staging-dns-preflight -o 'jsonpath={.metadata.annotations.external-dns\.alpha\.kubernetes\.io/hostname}')"
+  dns_target="$(kubectl -n "$namespace" get service libreplay-staging-dns-preflight -o 'jsonpath={.metadata.annotations.external-dns\.alpha\.kubernetes\.io/target}')"
+  dns_proxied="$(kubectl -n "$namespace" get service libreplay-staging-dns-preflight -o 'jsonpath={.metadata.annotations.external-dns\.alpha\.kubernetes\.io/cloudflare-proxied}')"
+  if [ "$dns_service_type" = "ExternalName" ] && [ "$dns_host" = "$host" ] && [ "$dns_target" = "57.129.17.172" ] && [ "$dns_proxied" = "true" ]; then
+    ok "DNS preflight service is present for ${host}"
+  else
+    fail "DNS preflight service has unexpected type/annotations"
+  fi
+else
+  block "DNS preflight service is missing in ${namespace}"
 fi
 
 if kubectl -n "$namespace" get configmap libreplay-config >/dev/null 2>&1; then
