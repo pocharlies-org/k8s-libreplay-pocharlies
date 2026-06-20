@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-overlay="${1:-staging/runtime}"
+overlay="${1:-staging/overlays/runtime}"
 rendered="$(mktemp)"
 trap 'rm -f "$rendered"' EXIT
 

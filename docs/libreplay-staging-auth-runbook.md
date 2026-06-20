@@ -32,12 +32,12 @@ a separate staging environment before production can be considered.
   Evidence: `staging/libreplay-staging-contract.yaml` contains only Namespace,
   `ExternalSecret` and `ConfigMap`; it does not define workloads or ingress.
 - [x] Staging runtime overlay is renderable but not live. Evidence:
-  `staging/runtime` renders the full workload set into `libreplay-staging`
+  `staging/overlays/runtime` renders the full workload set into `libreplay-staging`
   with real-provider auth posture, required OAuth/SMTP secret refs and staging
   ingress; it is intentionally not the Argo target until real secrets/DNS are
   present.
 - [x] Static runtime guard prevents LAN config drift. Evidence:
-  `scripts/check-libreplay-staging-runtime.sh` renders `staging/runtime`,
+  `scripts/check-libreplay-staging-runtime.sh` renders `staging/overlays/runtime`,
   performs client dry-run and rejects LAN host, LAN DB name, mock OAuth,
   console auth email, mock payments, optional OAuth/SMTP secret refs,
   ClientIP-only ingress and SSO middleware.
@@ -102,7 +102,7 @@ Validate the future workload runtime overlay without applying it:
 
 ```bash
 scripts/check-libreplay-staging-runtime.sh
-kubectl apply --dry-run=client -k staging/runtime
+kubectl apply --dry-run=client -k staging/overlays/runtime
 ```
 
 Use server-side dry-run only after `libreplay-staging` exists in the live
@@ -135,7 +135,7 @@ email-verification job to drain without failures.
 - No live `ExternalSecret/libreplay-secrets` for staging.
 - Static contract exists at `staging/libreplay-staging-contract.yaml`; the safe
   first live step is an Argo app that targets this contract-only path.
-- Runtime overlay exists at `staging/runtime`, but it is intentionally not wired
+- Runtime overlay exists at `staging/overlays/runtime`, but it is intentionally not wired
   into Argo until real secrets, DNS/TLS and pull-secret handling are validated.
 - Staging DNS/TLS for `libreplay-staging.e-dani.com` has not been proven live.
 - `harbor-pull` exists in LAN but not in a live `libreplay-staging` namespace.

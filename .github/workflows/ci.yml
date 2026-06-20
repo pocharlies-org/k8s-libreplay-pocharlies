@@ -18,7 +18,7 @@ jobs:
       runner: arc-k8s
       run_node: false
       run_docker_build: false
-      kustomize_paths: "k8s staging staging/runtime"
+      kustomize_paths: "k8s staging staging/overlays/runtime"
     secrets: inherit
 
   no-latest-images:
