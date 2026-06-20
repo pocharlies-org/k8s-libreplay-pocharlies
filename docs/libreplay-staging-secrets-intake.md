@@ -51,61 +51,68 @@ Scope: unblock `ExternalSecret/libreplay-secrets` in namespace `libreplay-stagin
 
 ## Current Evidence
 
-- `scripts/check-libreplay-staging-preflight.sh --strict` on 2026-06-20 09:23 CEST currently reports exactly two blockers: `ExternalSecret/libreplay-secrets` is `Ready=False|SecretSyncedError`, and `Secret/libreplay-secrets` is not materialized.
-- The same preflight reports Argo `libreplay-staging` as `Synced|Degraded` on path `staging`, validates the staging config posture, confirms no runtime workloads are present, and proves DNS/TLS for `libreplay-staging.e-dani.com`.
+- `scripts/check-libreplay-staging-preflight.sh --strict` on 2026-06-20 22:27 CEST currently reports exactly two blockers: `ExternalSecret/libreplay-secrets` is `Ready=False|SecretSyncedError`, and `Secret/libreplay-secrets` is not materialized.
+- The same preflight reports Argo `libreplay-staging` as `Synced|Degraded` on path `staging`, validates the staging config posture, confirms no runtime workloads are present, verifies `harbor-pull`, and proves DNS/TLS for `libreplay-staging.e-dani.com`.
 - `ExternalSecret/harbor-pull` in the same namespace is `Ready=True`, so the Vault store and ESO controller are working.
-- 1Password metadata search found no item named LibrePlay or SauvagePlay for OAuth/SMTP.
+- ESO logs confirm the exact provider error: `secret/libreplay/staging` does not exist.
+- A Vault metadata read from `vault-0` without an authorized token returned `403 permission denied`; do not bypass Vault access policy.
+- Prior 1Password metadata search found no item named LibrePlay or SauvagePlay for OAuth/SMTP. Current re-check is blocked because the Mac 1Password CLI reports `account is not signed in`.
+- GitHub repo `pocharlies-org/libreplay` currently has no visible `staging` environment via `gh api repos/pocharlies-org/libreplay/environments`; therefore `PW_STAGING_AUTH_EMAIL` is not verified.
 - 1Password metadata has adjacent candidates, but they are not enough to authorize reuse:
   - Google OAuth candidate `oautnh google auth skirmshop app` has `Client ID`, `Client secret`, and `oauth_keys_json`, but title indicates Skirmshop, not LibrePlay.
   - Facebook candidates are login items with username/password/notes, not confirmed app OAuth credentials.
   - SMTP-adjacent candidates include Resend/Mailrelay/Gmail items, but no verified LibrePlay sender evidence was confirmed.
 
-## Safe Push Procedure
+## Safe Bootstrap Script
 
-Use this only after all blocked provider fields have approved values available. Keep shell tracing disabled and do not echo values.
+Use the bootstrap script when approved LibrePlay staging provider values are
+available. It validates shape, generates internal staging-only secrets in memory,
+writes the Vault payload through a temporary `0600` JSON file, and never prints
+secret values.
+
+Dry-run with provider values already exported:
 
 ```bash
 set +x
-# export DATABASE_URL=...
-# export REDIS_URL=...
-# export AUTH_SECRET=...
-# export MINIO_ACCESS_KEY=...
-# export MINIO_SECRET_KEY=...
-# export MEILISEARCH_API_KEY=...
-# export DB_USER=...
-# export DB_PASSWORD=...
-# export SEED_USER_PASSWORD=...
+scripts/bootstrap-libreplay-staging-secrets.sh --dry-run
+```
+
+Write only after Google/Meta callback evidence and SMTP sender/domain evidence
+are confirmed:
+
+```bash
+set +x
+export LIBREPLAY_STAGING_PROVIDER_CALLBACKS_CONFIRMED=1
+export LIBREPLAY_STAGING_SMTP_SENDER_CONFIRMED=1
+scripts/bootstrap-libreplay-staging-secrets.sh --write --sync-eso
+```
+
+The script intentionally refuses write mode without these acknowledgements:
+
+- `LIBREPLAY_STAGING_PROVIDER_CALLBACKS_CONFIRMED=1`
+- `LIBREPLAY_STAGING_SMTP_SENDER_CONFIRMED=1`
+
+## Safe Push Procedure
+
+Use this only after all blocked provider fields have approved values available.
+Keep shell tracing disabled and do not echo values. Prefer the bootstrap script;
+do not use `vault kv put key="$VALUE"` command-line arguments for real secret
+values because they can be exposed through process inspection.
+
+```bash
+set +x
 # export GOOGLE_CLIENT_ID=...
 # export GOOGLE_CLIENT_SECRET=...
 # export FACEBOOK_CLIENT_ID=...
 # export FACEBOOK_CLIENT_SECRET=...
-# export OAUTH_TOKEN_ENC_KEY=...
 # export SMTP_HOST=...
 # export SMTP_PORT=...
 # export SMTP_USER=...
 # export SMTP_PASSWORD=...
-# export METRICS_BEARER_TOKEN=...
+export LIBREPLAY_STAGING_PROVIDER_CALLBACKS_CONFIRMED=1
+export LIBREPLAY_STAGING_SMTP_SENDER_CONFIRMED=1
 
-vault kv put secret/libreplay/staging \
-  DATABASE_URL="$DATABASE_URL" \
-  REDIS_URL="$REDIS_URL" \
-  AUTH_SECRET="$AUTH_SECRET" \
-  MINIO_ACCESS_KEY="$MINIO_ACCESS_KEY" \
-  MINIO_SECRET_KEY="$MINIO_SECRET_KEY" \
-  MEILISEARCH_API_KEY="$MEILISEARCH_API_KEY" \
-  DB_USER="$DB_USER" \
-  DB_PASSWORD="$DB_PASSWORD" \
-  SEED_USER_PASSWORD="$SEED_USER_PASSWORD" \
-  GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
-  GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET" \
-  FACEBOOK_CLIENT_ID="$FACEBOOK_CLIENT_ID" \
-  FACEBOOK_CLIENT_SECRET="$FACEBOOK_CLIENT_SECRET" \
-  OAUTH_TOKEN_ENC_KEY="$OAUTH_TOKEN_ENC_KEY" \
-  SMTP_HOST="$SMTP_HOST" \
-  SMTP_PORT="$SMTP_PORT" \
-  SMTP_USER="$SMTP_USER" \
-  SMTP_PASSWORD="$SMTP_PASSWORD" \
-  METRICS_BEARER_TOKEN="$METRICS_BEARER_TOKEN"
+scripts/bootstrap-libreplay-staging-secrets.sh --write --sync-eso
 ```
 
 After push, validate by status and key names only:

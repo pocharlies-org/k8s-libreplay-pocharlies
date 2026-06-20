@@ -1,7 +1,7 @@
 # LibrePlay Staging Auth Runbook
 
 Status: `BLOCKED-BY-REAL-SECRETS`
-Last updated: 2026-06-20 09:23 CEST
+Last updated: 2026-06-20 22:35 CEST
 
 ## Objective
 
@@ -70,6 +70,11 @@ a separate staging environment before production can be considered.
 - [blocked] Vault/ExternalSecret exposes the required key names without
   printing values. Blocker: live `ExternalSecret/libreplay-secrets` is
   `Ready=False` with `SecretSyncedError` because provider data is absent.
+- [x] A no-echo bootstrap exists for the future Vault write. Evidence:
+  `scripts/bootstrap-libreplay-staging-secrets.sh` generates internal secrets,
+  requires provider env vars, refuses write mode without Google/Meta/SMTP
+  evidence acknowledgements, and writes via a temporary file instead of process
+  arguments.
 - [x] Static contract can be validated without live secrets. Evidence:
   `scripts/check-libreplay-staging-contract.sh --static` validates key names,
   staging config, non-placeholder HTTPS URLs and non-local `MAIL_FROM`.
@@ -169,6 +174,18 @@ Only when this is expected to pass, enforce the gate:
 scripts/check-libreplay-staging-preflight.sh --strict
 ```
 
+Prepare the Vault record only after approved Google, Meta and SMTP values are
+exported in the shell:
+
+```bash
+set +x
+scripts/bootstrap-libreplay-staging-secrets.sh --dry-run
+export LIBREPLAY_STAGING_PROVIDER_CALLBACKS_CONFIRMED=1
+export LIBREPLAY_STAGING_SMTP_SENDER_CONFIRMED=1
+scripts/bootstrap-libreplay-staging-secrets.sh --write --sync-eso
+scripts/check-libreplay-staging-preflight.sh --strict
+```
+
 Run the gated real-provider smoke from the source repo:
 
 ```bash
@@ -195,7 +212,8 @@ email-verification job to drain without failures.
 - Namespace `libreplay-staging`, `ConfigMap/libreplay-config` and
   `ExternalSecret/libreplay-secrets` exist.
 - `ExternalSecret/libreplay-secrets` is `Ready=False SecretSyncedError` because
-  `secret/libreplay/staging` provider data is missing in Vault.
+  `secret/libreplay/staging` provider data is missing in Vault; ESO logs report
+  `Secret does not exist`.
 - `ExternalSecret/harbor-pull` is now part of the staging contract and should
   materialize from `infra/harbor/ci-robot`; current preflight verifies it as OK,
   but it must be checked again immediately before runtime sync.
@@ -209,5 +227,9 @@ email-verification job to drain without failures.
   contract/preflight level, but runtime workloads are still intentionally absent.
 - Current `libreplay-secrets` in namespace `libreplay` lacks Google, Facebook,
   OAuth encryption and SMTP provider keys.
+- Current 1Password re-check is blocked because the Mac `op` account is not
+  signed in; prior metadata did not prove LibrePlay-specific OAuth/SMTP items.
+- GitHub environment `staging` and `PW_STAGING_AUTH_EMAIL` are not verified;
+  `gh api repos/pocharlies-org/libreplay/environments` returned no environments.
 - No Google/Meta staging callback smoke has been run.
 - No SMTP delivery smoke has been run against a controlled staging mailbox.
