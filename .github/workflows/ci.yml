@@ -24,7 +24,7 @@ jobs:
   no-latest-images:
     runs-on: arc-k8s
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Reject latest image tags
         run: |
           set -euo pipefail
