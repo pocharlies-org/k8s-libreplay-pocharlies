@@ -1,0 +1,12 @@
+- op: replace
+  path: /metadata/name
+  value: libreplay-staging
+- op: replace
+  path: /spec/routes
+  value:
+    - match: Host(`libreplay-staging.e-dani.com`)
+      kind: Rule
+      priority: 300
+      services:
+        - name: libreplay-web
+          port: 80

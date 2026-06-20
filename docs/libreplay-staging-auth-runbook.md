@@ -1,7 +1,7 @@
 # LibrePlay Staging Auth Runbook
 
 Status: `BLOCKED-BY-REAL-SECRETS`
-Last updated: 2026-06-20 05:58 Europe/Madrid
+Last updated: 2026-06-20 06:43 CEST
 
 ## Objective
 
@@ -31,6 +31,16 @@ a separate staging environment before production can be considered.
 - [x] Static staging auth contract exists without enabling live staging.
   Evidence: `staging/libreplay-staging-contract.yaml` contains only Namespace,
   `ExternalSecret` and `ConfigMap`; it does not define workloads or ingress.
+- [x] Staging runtime overlay is renderable but not live. Evidence:
+  `staging/runtime` renders the full workload set into `libreplay-staging`
+  with real-provider auth posture, required OAuth/SMTP secret refs and staging
+  ingress; it is intentionally not the Argo target until real secrets/DNS are
+  present.
+- [x] Static runtime guard prevents LAN config drift. Evidence:
+  `scripts/check-libreplay-staging-runtime.sh` renders `staging/runtime`,
+  performs client dry-run and rejects LAN host, LAN DB name, mock OAuth,
+  console auth email, mock payments, optional OAuth/SMTP secret refs,
+  ClientIP-only ingress and SSO middleware.
 - [ ] Vault/ExternalSecret exposes the required key names without printing
   values. Evidence required:
   `scripts/check-libreplay-staging-contract.sh libreplay-staging`.
@@ -62,6 +72,7 @@ not print their values:
 - `MEILISEARCH_API_KEY`
 - `DB_USER`
 - `DB_PASSWORD`
+- `SEED_USER_PASSWORD`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `FACEBOOK_CLIENT_ID`
@@ -85,6 +96,13 @@ Validate the static contract without applying it:
 ```bash
 scripts/check-libreplay-staging-contract.sh --static
 kubectl apply --dry-run=client -f staging/libreplay-staging-contract.yaml
+```
+
+Validate the future workload runtime overlay without applying it:
+
+```bash
+scripts/check-libreplay-staging-runtime.sh
+kubectl apply --dry-run=client -k staging/runtime
 ```
 
 Use server-side dry-run only after `libreplay-staging` exists in the live
@@ -115,9 +133,12 @@ email-verification job to drain without failures.
 - No live Argo app named `libreplay-staging`.
 - No live namespace named `libreplay-staging`.
 - No live `ExternalSecret/libreplay-secrets` for staging.
-- Static contract exists at `staging/libreplay-staging-contract.yaml`, but it
-  is intentionally not wired into Argo yet.
+- Static contract exists at `staging/libreplay-staging-contract.yaml`; the safe
+  first live step is an Argo app that targets this contract-only path.
+- Runtime overlay exists at `staging/runtime`, but it is intentionally not wired
+  into Argo until real secrets, DNS/TLS and pull-secret handling are validated.
 - Staging DNS/TLS for `libreplay-staging.e-dani.com` has not been proven live.
+- `harbor-pull` exists in LAN but not in a live `libreplay-staging` namespace.
 - Current `libreplay-secrets` in namespace `libreplay` lacks Google, Facebook,
   OAuth encryption and SMTP provider keys.
 - No Google/Meta staging callback smoke has been run.

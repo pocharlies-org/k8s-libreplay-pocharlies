@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: libreplay-db-migrate-c37cdca
+  namespace: libreplay
+  annotations:
+    libreplay.e-dani.com/lan-demo: "migrate libreplay_staging"
+    libreplay.e-dani.com/staging: "migrate libreplay_staging"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: libreplay-db-migrate-2a04229
+  namespace: libreplay
+  annotations:
+    libreplay.e-dani.com/lan-demo: "migrate libreplay_staging"
+    libreplay.e-dani.com/staging: "migrate libreplay_staging"

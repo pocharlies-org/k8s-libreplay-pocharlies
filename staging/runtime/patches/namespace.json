@@ -1,0 +1,9 @@
+- op: replace
+  path: /metadata/name
+  value: libreplay-staging
+- op: add
+  path: /metadata/labels
+  value:
+    app.kubernetes.io/name: libreplay
+    app.kubernetes.io/part-of: libreplay
+    libreplay.e-dani.com/environment: staging

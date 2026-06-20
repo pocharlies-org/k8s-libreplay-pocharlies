@@ -18,7 +18,7 @@ jobs:
       runner: arc-k8s
       run_node: false
       run_docker_build: false
-      kustomize_paths: ". k8s"
+      kustomize_paths: "k8s staging staging/runtime"
     secrets: inherit
 
   no-latest-images:
@@ -28,7 +28,7 @@ jobs:
       - name: Reject latest image tags
         run: |
           set -euo pipefail
-          if grep -RInE 'image: .+:latest($|[[:space:]])' k8s; then
+          if grep -RInE 'image: .+:latest($|[[:space:]])' k8s staging; then
             echo "Kubernetes manifests must pin images by immutable tag and digest, never :latest." >&2
             exit 1
           fi

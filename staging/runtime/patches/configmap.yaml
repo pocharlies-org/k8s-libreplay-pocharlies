@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: libreplay-config
+  namespace: libreplay
+  labels:
+    libreplay.e-dani.com/environment: staging
+data:
+  NODE_ENV: production
+  DEPLOYMENT_MODE: staging
+  APP_BASE_URL: https://libreplay-staging.e-dani.com
+  AUTH_URL: https://libreplay-staging.e-dani.com
+  AUTH_TRUST_HOST: "true"
+  DEFAULT_LOCALE: es
+  SUPPORTED_LOCALES: es,en,fr,de,pt
+  RATE_LIMIT_DISABLED: "false"
+  RATE_LIMIT_BACKEND: redis
+  RATE_LIMIT_REDIS_PREFIX: libreplay:rl
+  RATE_LIMIT_FAIL_MODE: closed
+  RATE_LIMIT_TIMEOUT_MS: "250"
+  AUTH_EMAIL_PROVIDER: smtp
+  MAIL_FROM: LibrePlay <noreply@libreplay.e-dani.com>
+  SMTP_SECURE: "true"
+  ENABLE_LAN_DEMO_LOGIN: "false"
+  LAN_DEMO_ALLOWED_HOSTS: ""
+  LAN_DEMO_ALLOWED_CIDRS: ""
+  USE_MOCK_OAUTH: "false"
+  PAYMENT_PROVIDER: disabled
+  ENABLE_MOCK_PAYMENTS: "false"
+  ENABLE_MOCK_AGE_VERIFICATION: "true"
+  ENABLE_MOCK_FACE_LIVENESS: "true"
+  ENABLE_MOCK_CSAM_SCANNER: "true"
+  ENABLE_MOCK_MEDIA_MODERATION: "true"
+  ENABLE_MOCK_LLM: "true"
+  MINIO_ENDPOINT: http://libreplay-minio.libreplay-staging.svc.cluster.local:9000
+  MINIO_BUCKET: libreplay-media-staging
+  MINIO_REGION: us-east-1
+  MINIO_PUBLIC_URL: http://libreplay-minio.libreplay-staging.svc.cluster.local:9000
+  MEILISEARCH_HOST: http://libreplay-meilisearch.libreplay-staging.svc.cluster.local:7700
