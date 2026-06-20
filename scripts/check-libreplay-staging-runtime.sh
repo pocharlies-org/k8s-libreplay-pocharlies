@@ -88,6 +88,8 @@ require_pattern 'namespace:[[:space:]]*traefik-edge' 'IngressRoute uses the publ
 require_pattern 'POSTGRES_DB[[:space:]]*$' 'Postgres DB env exists'
 require_pattern 'libreplay_staging' 'staging database name is rendered'
 require_pattern 'key:[[:space:]]*secret/libreplay/staging' 'ExternalSecret reads from the staging Vault path'
+require_pattern 'bearerTokenSecret:' 'VMServiceScrape uses bearer token auth in staging'
+require_pattern 'key:[[:space:]]*METRICS_BEARER_TOKEN' 'VMServiceScrape reads the staging metrics bearer token'
 
 for key in \
   DATABASE_URL REDIS_URL AUTH_SECRET MINIO_ACCESS_KEY MINIO_SECRET_KEY \

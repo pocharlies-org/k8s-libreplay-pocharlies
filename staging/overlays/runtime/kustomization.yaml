@@ -18,6 +18,7 @@ patches:
   - path: patch-configmap.yaml
   - path: patch-postgres-db.yaml
   - path: patch-required-provider-secrets.yaml
+  - path: patch-vmservicescrape.yaml
   - path: patch-ingressroute.json
     target:
       group: traefik.io
