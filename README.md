@@ -16,5 +16,6 @@ Gestionado por ArgoCD desde [k8s-gitops-pocharlies](https://github.com/pocharlie
   [docs/libreplay-production-readiness-pmo.md](docs/libreplay-production-readiness-pmo.md).
   Runbook para desbloquear staging real de Google/Facebook/SMTP:
   [docs/libreplay-staging-auth-runbook.md](docs/libreplay-staging-auth-runbook.md).
-  Contrato estático no aplicado:
+  Contrato `staging` aplicado en modo contract-only; runtime bloqueado hasta
+  que `scripts/check-libreplay-staging-preflight.sh --strict` pase:
   [staging/libreplay-staging-contract.yaml](staging/libreplay-staging-contract.yaml).
