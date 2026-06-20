@@ -340,7 +340,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: trusted-client-ip-20260620-0825
+        libreplay.e-dani.com/config-rollout: payment-ledger-20260620-0917
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -348,7 +348,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-b7cd8097bb02@sha256:24647560812ceed10e5643d14f90a0fbd084a86b8b73087c5f3271360bfdb18a
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-df168914672d@sha256:c75d9ef07b1648e9f1c307d090c0777239bfecb81b7b0c8e8db442f6f44376c2
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -407,7 +407,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: trusted-client-ip-20260620-0825
+        libreplay.e-dani.com/config-rollout: payment-ledger-20260620-0917
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -415,7 +415,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-b7cd8097bb02@sha256:24c63701d3190485f8a165ec8dcc7d2f4168944ebcb740141dd98c38785c94f6
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-df168914672d@sha256:91d9f9c62c78c47f9899d63b4d309b8ae67e70ed3cabd547015d7f2524b4b158
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
@@ -568,6 +568,36 @@ spec:
       containers:
         - name: migrate
           image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-18aeffb506f4@sha256:b0891ea1999b5fd77fc68c300a7bb5c9b8c9d77cca226ac22be5d9ef51eab864
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: libreplay-db-migrate-df16891
+  namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    libreplay.e-dani.com/lan-demo: "migrate payment transaction ledger"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels: { app: libreplay-db-migrate }
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: harbor-pull
+      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      containers:
+        - name: migrate
+          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-df168914672d@sha256:798579f5b7bca4fe156ff907f8069890a7e112a3a00d28e6fe53fa734a096871
           env:
             - name: DATABASE_URL
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
