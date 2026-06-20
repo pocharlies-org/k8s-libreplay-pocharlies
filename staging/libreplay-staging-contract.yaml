@@ -78,6 +78,10 @@ data:
   DEFAULT_LOCALE: es
   SUPPORTED_LOCALES: es,en,fr,de,pt
   RATE_LIMIT_DISABLED: "false"
+  RATE_LIMIT_BACKEND: redis
+  RATE_LIMIT_REDIS_PREFIX: libreplay:rl
+  RATE_LIMIT_FAIL_MODE: closed
+  RATE_LIMIT_TIMEOUT_MS: "250"
   AUTH_EMAIL_PROVIDER: smtp
   MAIL_FROM: LibrePlay <noreply@libreplay.example.com>
   SMTP_SECURE: "true"

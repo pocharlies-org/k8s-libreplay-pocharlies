@@ -52,6 +52,10 @@ data:
   DEFAULT_LOCALE: es
   SUPPORTED_LOCALES: es,en,fr,de,pt
   RATE_LIMIT_DISABLED: "false"
+  RATE_LIMIT_BACKEND: redis
+  RATE_LIMIT_REDIS_PREFIX: libreplay:rl
+  RATE_LIMIT_FAIL_MODE: closed
+  RATE_LIMIT_TIMEOUT_MS: "250"
   AUTH_EMAIL_PROVIDER: console
   MAIL_FROM: LibrePlay <noreply@libreplay.local>
   SMTP_SECURE: "false"
@@ -334,7 +338,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: visibility-idor-gate-20260620-0205
+        libreplay.e-dani.com/config-rollout: redis-rate-limit-20260620-0245
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -342,7 +346,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-7a7d56663dfb@sha256:76dd4dda6d29eda1654a46dac3caa406438b83ca110530a70fb5afa8549acd28
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-4be4785bf83b@sha256:c80a9bd7c319792767e5f01ab5f169c2cbb78ed7c02e07d3878554f5fed7f0af
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -401,7 +405,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: visibility-idor-gate-20260620-0205
+        libreplay.e-dani.com/config-rollout: redis-rate-limit-20260620-0245
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -409,7 +413,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-7a7d56663dfb@sha256:abcc320b67c4958c3d375fb4f2aa0a6ec28d77f97d2ba79f258362b4b2f22103
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-4be4785bf83b@sha256:09f5127a565f3823b4c671ebc19ca451a681cfde0c16dbdeb911cbcf9199fc0e
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
