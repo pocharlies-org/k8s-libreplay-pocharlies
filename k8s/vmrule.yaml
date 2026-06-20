@@ -1,0 +1,102 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: libreplay-runtime
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: libreplay
+    app.kubernetes.io/part-of: libreplay
+spec:
+  groups:
+    - name: libreplay.runtime
+      interval: 30s
+      rules:
+        - alert: LibrePlayMetricsScrapeMissing
+          expr: |
+            (up{namespace="libreplay",job="libreplay-web"} == 0)
+            or
+            absent(up{namespace="libreplay",job="libreplay-web"})
+          for: 2m
+          labels:
+            severity: critical
+            area: observability
+            app: libreplay
+          annotations:
+            summary: "LibrePlay metrics scrape is missing"
+            description: "VictoriaMetrics has not scraped libreplay-web metrics for more than 2 minutes. Check VMServiceScrape/libreplay-web, Service labels and /api/metrics."
+        - alert: LibrePlayDeploymentUnavailable
+          expr: |
+            kube_deployment_spec_replicas{namespace="libreplay",deployment=~"libreplay-web|libreplay-worker"}
+              >
+            kube_deployment_status_replicas_available{namespace="libreplay",deployment=~"libreplay-web|libreplay-worker"}
+          for: 5m
+          labels:
+            severity: critical
+            area: availability
+            app: libreplay
+          annotations:
+            summary: "LibrePlay deployment {{ $labels.deployment }} is unavailable"
+            description: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has fewer available replicas than desired for more than 5 minutes."
+        - alert: LibrePlayPostgresUnavailable
+          expr: |
+            kube_statefulset_replicas{namespace="libreplay",statefulset="libreplay-postgres"}
+              >
+            kube_statefulset_status_replicas_ready{namespace="libreplay",statefulset="libreplay-postgres"}
+          for: 5m
+          labels:
+            severity: critical
+            area: database
+            app: libreplay
+          annotations:
+            summary: "LibrePlay Postgres StatefulSet is unavailable"
+            description: "StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} has fewer ready replicas than desired for more than 5 minutes."
+        - alert: LibrePlayDependencyDown
+          expr: min by (dependency) (libreplay_dependency_up{namespace="libreplay",service="libreplay-web"}) < 1
+          for: 2m
+          labels:
+            severity: critical
+            area: dependency
+            app: libreplay
+          annotations:
+            summary: "LibrePlay dependency {{ $labels.dependency }} is down"
+            description: "The /api/health/deps runtime check reports {{ $labels.dependency }} as unavailable for more than 2 minutes."
+        - alert: LibrePlayDependencyLatencyHigh
+          expr: max by (dependency) (libreplay_dependency_latency_ms{namespace="libreplay",service="libreplay-web"}) > 2000
+          for: 10m
+          labels:
+            severity: warn
+            area: dependency
+            app: libreplay
+          annotations:
+            summary: "LibrePlay dependency {{ $labels.dependency }} latency is high"
+            description: "The /api/health/deps runtime check for {{ $labels.dependency }} has stayed above 2000 ms for more than 10 minutes."
+        - alert: LibrePlayQueueFailures
+          expr: sum by (queue) (libreplay_queue_jobs{namespace="libreplay",service="libreplay-web",state="failed"}) > 0
+          for: 5m
+          labels:
+            severity: warn
+            area: queues
+            app: libreplay
+          annotations:
+            summary: "LibrePlay queue {{ $labels.queue }} has failed jobs"
+            description: "BullMQ queue {{ $labels.queue }} has failed jobs for more than 5 minutes. Check worker logs and retry/dead-letter policy."
+        - alert: LibrePlayQueueBacklogHigh
+          expr: sum by (queue) (libreplay_queue_jobs{namespace="libreplay",service="libreplay-web",state=~"waiting|delayed"}) > 25
+          for: 15m
+          labels:
+            severity: warn
+            area: queues
+            app: libreplay
+          annotations:
+            summary: "LibrePlay queue {{ $labels.queue }} backlog is high"
+            description: "BullMQ queue {{ $labels.queue }} has more than 25 waiting or delayed jobs for more than 15 minutes."
+        - alert: LibrePlayWorkerOrWebRestarting
+          expr: sum by (container) (increase(kube_pod_container_status_restarts_total{namespace="libreplay",container=~"libreplay-web|libreplay-worker"}[15m])) > 0
+          for: 5m
+          labels:
+            severity: warn
+            area: kubernetes
+            app: libreplay
+          annotations:
+            summary: "LibrePlay {{ $labels.container }} restarted"
+            description: "Container {{ $labels.container }} restarted in the last 15 minutes and remained a signal for 5 minutes. Check pod events and logs."
