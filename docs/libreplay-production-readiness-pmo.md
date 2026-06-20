@@ -1,7 +1,7 @@
 # LibrePlay Production Readiness PMO
 
 Status: `NOT-PRODUCTION-READY`
-Last updated: 2026-06-20 07:11 CEST
+Last updated: 2026-06-20 07:28 CEST
 Target today: `https://libreplay.lan.e-dani.com`
 
 ## Executive Position
@@ -32,6 +32,7 @@ PMO assessment: do not open this to real users until the P0/P1 gates below are c
 - [x] Staging can no longer pass with mock OAuth enabled at app-config level. Evidence: source commit `31b26c3`; `DEPLOYMENT_MODE=staging` requires `USE_MOCK_OAUTH=false`, Google/Facebook secrets and `OAUTH_TOKEN_ENC_KEY`.
 - [x] Static staging secret contract exists. Evidence: `staging/libreplay-staging-contract.yaml` defines only Namespace, ExternalSecret and ConfigMap for `libreplay-staging`, references `secret/libreplay/staging`, and validates with `kubectl apply --dry-run=client`.
 - [x] Staging runtime overlay is prepared but not live. Evidence: `staging/overlays/runtime` renders a full `libreplay-staging` workload overlay with real auth/SMTP posture and passes `scripts/check-libreplay-staging-runtime.sh`; it is not wired to Argo until real secrets, DNS/TLS and image pull secret handling are proven.
+- [x] Staging preflight and image pull secret contract exist. Evidence: `staging/libreplay-staging-contract.yaml` declares `ExternalSecret/harbor-pull` from `infra/harbor/ci-robot`, and `scripts/check-libreplay-staging-preflight.sh` checks app/path safety, no runtime resources, config posture, ExternalSecret/Secret readiness, DNS and TLS without printing secrets.
 - [x] Pending OAuth email flow no longer dead-ends. Evidence: `/[locale]/auth/social-email` and `POST /api/auth/social-email` exist; pending social cookie is AES-GCM sealed, token-free and TTL-bound; manual email completion queues verification email and full LAN E2E is green.
 - [x] Mobile Discover responsive bug is fixed. Evidence: first LAN mobile run on authenticated mobile coverage found the filters panel pushed `Mensaje` outside the iPhone viewport; source `8d64302` stacks Discover filters on mobile and final LAN mobile/full E2E passed.
 - [x] Video MP4/HLS rendition MVP is deployed and validated. Evidence: source commit `2a04229`, migration `20260619212500_video_renditions`, Release Image run `27849982311`, GitOps commits `6437736` and `32ad2dc`, focused LAN media E2E `5 passed (7.2s)`, latest DB video asset `cmqlh6b4m000d4ozyuwcxz4ry` has `THUMB_LARGE`, `VIDEO_MP4_480P` and `VIDEO_HLS_480P`, and full LAN E2E returned `90 passed (1.5m)`.

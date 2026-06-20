@@ -12,6 +12,7 @@ if [ "${1:-}" = "--static" ]; then
 fi
 
 secret_name="${SECRET_NAME:-libreplay-secrets}"
+pull_secret_name="${PULL_SECRET_NAME:-harbor-pull}"
 config_name="${CONFIG_NAME:-libreplay-config}"
 
 required_secret_keys="
@@ -105,6 +106,19 @@ if [ "$mode" = "static" ]; then
   done
   info "static contract declares required ExternalSecret key names; values were not printed"
 
+  if ! grep -Eq '^[[:space:]]*name:[[:space:]]*harbor-pull[[:space:]]*$' "$manifest"; then
+    fail "static contract missing ExternalSecret harbor-pull"
+  fi
+  if ! grep -Eq 'type:[[:space:]]*kubernetes\.io/dockerconfigjson' "$manifest"; then
+    fail "static contract missing dockerconfigjson template for harbor-pull"
+  fi
+  for key in username password registry; do
+    if ! grep -Eq "remoteRef:[[:space:]]*\\{ key: infra/harbor/ci-robot, property: ${key} \\}" "$manifest"; then
+      fail "static contract missing harbor-pull remoteRef ${key}"
+    fi
+  done
+  info "static contract declares harbor-pull ExternalSecret without printing registry credentials"
+
   for pair in $required_config_values; do
     key="${pair%%=*}"
     expected="${pair#*=}"
@@ -135,6 +149,20 @@ for key in $required_secret_keys; do
   fi
 done
 info "required secret key names exist in ${namespace}/${secret_name}; values were not printed"
+
+if ! kubectl -n "$namespace" get secret "$pull_secret_name" >/dev/null 2>&1; then
+  fail "missing image pull secret ${namespace}/${pull_secret_name}"
+fi
+pull_secret_type="$(kubectl -n "$namespace" get secret "$pull_secret_name" -o 'jsonpath={.type}')"
+if [ "$pull_secret_type" != "kubernetes.io/dockerconfigjson" ]; then
+  fail "image pull secret ${namespace}/${pull_secret_name} has type ${pull_secret_type:-<empty>}"
+fi
+if ! kubectl -n "$namespace" get secret "$pull_secret_name" \
+  -o go-template='{{range $k, $_ := .data}}{{printf "%s\n" $k}}{{end}}' \
+  | grep -Fx '.dockerconfigjson' >/dev/null; then
+  fail "image pull secret ${namespace}/${pull_secret_name} is missing .dockerconfigjson"
+fi
+info "image pull secret ${namespace}/${pull_secret_name} exists with dockerconfigjson key; value was not printed"
 
 for pair in $required_config_values; do
   key="${pair%%=*}"

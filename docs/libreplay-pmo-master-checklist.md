@@ -1,7 +1,7 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-20 07:11 CEST
+Last updated: 2026-06-20 07:28 CEST
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
@@ -16,7 +16,9 @@ Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readine
 - [x] Source guardrails remain green. Evidence: `pnpm --filter @libreplay/config test -- src/__tests__/env.test.ts` returned `14 passed`; `pnpm --filter @libreplay/auth test -- src/__tests__/oauth-config.test.ts` returned `7 passed`; `PW_STAGING_REAL_AUTH=1 ... playwright test --project=staging-real-auth --list` lists 2 staging smokes.
 - [x] Contract-only Argo app is prepared outside this repo for safe first live sync. Evidence: clean worktree `/home/dibanez/k8s/_worktrees/k8s-gitops-libreplay-staging` adds `apps/libreplay-staging.yaml` pointing to `repoURL=https://github.com/pocharlies/k8s-libreplay-pocharlies`, `targetRevision=deploy/prod`, `path=staging`, destination namespace `libreplay-staging`; root Kustomize render and client dry-run passed.
 - [x] Contract-only staging is live. Evidence: `Application/libreplay-staging` targets `path=staging` and reports `Synced|Degraded|1648469277e96cd7f8eb7e0e5384a8f837becc70|staging`; namespace `libreplay-staging`, `ConfigMap/libreplay-config` and `ExternalSecret/libreplay-secrets` exist; no runtime Deployment/StatefulSet/IngressRoute/Service/Pod resources are present.
-- [blocked] Live real-provider staging remains blocked. Evidence: `ExternalSecret/libreplay-secrets` is `Ready=False SecretSyncedError` because `secret/libreplay/staging` provider data is missing; Vault values for Google, Facebook, `OAUTH_TOKEN_ENC_KEY` and SMTP have not been proven; `libreplay-staging.e-dani.com` DNS/TLS is not proven; `harbor-pull` handling for runtime workloads is not validated.
+- [x] Staging image pull secret contract is declared. Evidence: `ExternalSecret/harbor-pull` in `staging/libreplay-staging-contract.yaml` uses the already-proven Vault path `infra/harbor/ci-robot` and templates a `kubernetes.io/dockerconfigjson` Secret without storing registry credentials in Git.
+- [x] Staging preflight script exists. Evidence: `scripts/check-libreplay-staging-preflight.sh` checks static contract, runtime overlay, Argo path safety, absence of runtime workloads, live config posture, `libreplay-secrets`, `harbor-pull`, DNS and TLS without printing secret values; `--strict` turns blockers into a hard gate.
+- [blocked] Live real-provider staging remains blocked. Evidence: `ExternalSecret/libreplay-secrets` is `Ready=False SecretSyncedError` because `secret/libreplay/staging` provider data is missing; Vault values for Google, Facebook, `OAUTH_TOKEN_ENC_KEY` and SMTP have not been proven; `libreplay-staging.e-dani.com` DNS/TLS is not proven.
 - [blocked] Staging runtime workloads must not be synced yet. Evidence: the renderable `staging/overlays/runtime` overlay defines web/worker/db/redis/minio/meili/ingress, but OAuth/SMTP secrets, DNS/TLS and image pull secret evidence are missing, so only the contract path `staging` is safe for first Argo sync.
 
 ## 2026-06-20 PMO Iteration - Visual Media Wash And Demo Asset Verification Gate

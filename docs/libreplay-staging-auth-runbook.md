@@ -1,7 +1,7 @@
 # LibrePlay Staging Auth Runbook
 
 Status: `BLOCKED-BY-REAL-SECRETS`
-Last updated: 2026-06-20 07:11 CEST
+Last updated: 2026-06-20 07:28 CEST
 
 ## Objective
 
@@ -31,6 +31,10 @@ a separate staging environment before production can be considered.
   Evidence: `kubectl -n libreplay-staging get externalsecret libreplay-secrets`
   reports `SecretSyncedError`, proving the contract exists but Vault data is
   missing.
+- [x] Staging image pull secret contract is declared without printing registry
+  credentials. Evidence: `ExternalSecret/harbor-pull` targets
+  `infra/harbor/ci-robot` and templates a `kubernetes.io/dockerconfigjson`
+  Secret.
 - [x] Static staging auth contract exists without enabling live staging.
   Evidence: `staging/libreplay-staging-contract.yaml` contains only Namespace,
   `ExternalSecret` and `ConfigMap`; it does not define workloads or ingress.
@@ -63,6 +67,8 @@ a separate staging environment before production can be considered.
   Evidence required: `/api/health/deps` shows `authEmail` failed `0`.
 - [ ] Full LAN E2E still passes after staging work. Evidence required:
   `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 npx playwright test`.
+- [ ] Staging preflight is strict-green before runtime sync. Evidence required:
+  `scripts/check-libreplay-staging-preflight.sh --strict`.
 
 ## Required Secret Key Names
 
@@ -110,9 +116,17 @@ scripts/check-libreplay-staging-runtime.sh
 kubectl apply --dry-run=client -k staging/overlays/runtime
 ```
 
-Use server-side dry-run only after `libreplay-staging` exists in the live
-cluster; otherwise the server rejects namespaced resources because the dry-run
-Namespace is not persisted.
+Run the live readiness report without printing secrets:
+
+```bash
+scripts/check-libreplay-staging-preflight.sh
+```
+
+Only when this is expected to pass, enforce the gate:
+
+```bash
+scripts/check-libreplay-staging-preflight.sh --strict
+```
 
 Run the gated real-provider smoke from the source repo:
 
@@ -141,10 +155,12 @@ email-verification job to drain without failures.
   `ExternalSecret/libreplay-secrets` exist.
 - `ExternalSecret/libreplay-secrets` is `Ready=False SecretSyncedError` because
   `secret/libreplay/staging` provider data is missing in Vault.
+- `ExternalSecret/harbor-pull` is now part of the staging contract and should
+  materialize from `infra/harbor/ci-robot`; verify it with the preflight before
+  runtime sync.
 - Runtime overlay exists at `staging/overlays/runtime`, but it is intentionally not wired
   into Argo until real secrets, DNS/TLS and pull-secret handling are validated.
 - Staging DNS/TLS for `libreplay-staging.e-dani.com` has not been proven live.
-- `harbor-pull` exists in LAN but not in a live `libreplay-staging` namespace.
 - Current `libreplay-secrets` in namespace `libreplay` lacks Google, Facebook,
   OAuth encryption and SMTP provider keys.
 - No Google/Meta staging callback smoke has been run.
