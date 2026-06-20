@@ -1,11 +1,31 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-20 01:28 Europe/Madrid
+Last updated: 2026-06-20 02:08 Europe/Madrid
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
-Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19/2026-06-20 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork, video MP4/HLS rendition MVP, payment fail-closed/provider selection, site-wide API mutation origin gate, P0 dates/posts BOLA fixes, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated staging real-provider smokes, staging auth runbook, static staging secret contract, pending social-email completion, authenticated mobile core coverage and the mobile Discover responsive fix are now green, but production is still blocked by real-provider secrets, real SMTP delivery in staging/prod, approved real PSP integration, full production media delivery/lifecycle/CDN controls, DevOps/DR, compliance and observability gaps.
+Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the 2026-06-19/2026-06-20 PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image variants, video probe/thumbnail groundwork, video MP4/HLS rendition MVP, payment fail-closed/provider selection, site-wide API mutation origin gate, concrete dates/posts/events/groups/paid-content/blog BOLA fixes, auth email recovery groundwork, OAuth/CSRF hardening, auth email queueing, redacted console auth-email logs, staging/prod SMTP/OAuth guardrails, staging mock-OAuth fail-closed policy, gated staging real-provider smokes, staging auth runbook, static staging secret contract, pending social-email completion, authenticated mobile core coverage and the mobile Discover responsive fix are now green, but production is still blocked by real-provider secrets, real SMTP delivery in staging/prod, approved real PSP integration, distributed abuse/rate limiting, full production media delivery/lifecycle/CDN controls, DevOps/DR, compliance and observability gaps.
+
+## 2026-06-20 PMO Iteration - Remaining BOLA Visibility Ownership Gate
+
+- [x] Source visibility/ownership patch committed and pushed. Evidence: source commit `7a7d566 fix(security): close remaining visibility idor`.
+- [x] Events public surfaces are constrained to published public events. Evidence: `canViewEvent` requires `status === PUBLISHED` and `visibility === PUBLIC_VERIFIED`; API detail/RSVP/review/report/purchase mock routes call it before side effects; SSR event detail page returns `notFound()` before render when the helper rejects.
+- [x] Event listings no longer advertise private/non-public events. Evidence: API events list, events page, landing event count, club page embedded events and club API embedded events all filter `status: PUBLISHED` plus `visibility: PUBLIC_VERIFIED`.
+- [x] Groups public surfaces are constrained to public verified groups. Evidence: `canViewGroup` requires `PUBLIC_VERIFIED`; group API detail/join/leave and SSR group detail page call it before membership side effects or render.
+- [x] Creator paid-content `postId` ownership is enforced. Evidence: `/api/creator/paid-content` verifies referenced post exists, belongs to `session.user.id` and is not deleted before `paidContent.create` or `recordActivity`; tests cover foreign post and deleted own post.
+- [x] Blog club attribution is enforced. Evidence: `/api/blog/submit` verifies `clubProfileId` belongs to the submitting user or an admin before slug lookup and `blogArticle.create`.
+- [x] Focused no-side-effect tests exist. Evidence: `apps/web/src/app/api/security-idor.test.ts` now has 11 tests covering events, groups, paid-content and blog negative paths, with assertions that `eventAttendee`, `eventReview`, `purchase`, `groupMember`, `paidContent`, `recordActivity`, `blogArticle`, `report` and moderation side effects are not called.
+- [x] Source validation passed. Evidence: `pnpm --filter @libreplay/web test -- src/app/api/security-idor.test.ts` -> 11 passed; `pnpm --filter @libreplay/web typecheck`; `pnpm --filter @libreplay/web test` -> 35 passed; `pnpm --filter @libreplay/web build`; `pnpm typecheck`; `pnpm test`; `pnpm lint`; `pnpm audit --prod`; and `git diff --check` all passed.
+- [x] Independent PMO verification passed. Evidence: McClintock and Raman identified route semantics; Boole initially failed the SSR detail leak and missing deleted-post test, then re-verified PASS after the fixes.
+- [x] Source CI and release image workflow passed. Evidence: source CI run `27853674582` completed `success` in 6m04s; Release Image run `27853851439` completed `success` in 5m41s with `version=sha-7a7d56663dfb`.
+- [x] Official image digests were published. Evidence: web `sha256:76dd4dda6d29eda1654a46dac3caa406438b83ca110530a70fb5afa8549acd28`; worker `sha256:abcc320b67c4958c3d375fb4f2aa0a6ec28d77f97d2ba79f258362b4b2f22103`; tools `sha256:3a951a6b76e886c5eface4e2a9de3c230374b17ea88dee7166d149e42cad0553`; seed `sha256:b906b7bcb99c16bef11a990a7e98dfb74d2da2a7759af1a437a91a54358b1ba9`.
+- [x] GitOps deploy is complete and current. Evidence: GitOps commit `458bb88 fix: deploy libreplay visibility idor guards`; GitOps CI run `27854062401` completed `success`; server-side dry-run passed; Argo is `Synced/Healthy` at `458bb8857553b22b17b38483c409981e9c69534e`.
+- [x] Runtime is on expected images. Evidence: `libreplay-web` is `1/1` on `sha-7a7d56663dfb@sha256:76dd4dda6d29eda1654a46dac3caa406438b83ca110530a70fb5afa8549acd28`; `libreplay-worker` is `1/1` on `worker-sha-7a7d56663dfb@sha256:abcc320b67c4958c3d375fb4f2aa0a6ec28d77f97d2ba79f258362b4b2f22103`; rollout annotation is `visibility-idor-gate-20260620-0205`.
+- [x] Runtime health, queues and logs are clean. Evidence: `/api/health/deps` reports postgres/redis/minio/meilisearch `ok:true`; authEmail and mediaModeration queues waiting/active/delayed/failed all `0`; recent web and worker log greps for `error|exception|failed` returned no matches.
+- [x] Runtime mutation smoke still passes. Evidence: cross-site `POST /api/events` with `Origin: https://evil.example` and `Sec-Fetch-Site: cross-site` returned `403 INVALID_ORIGIN`.
+- [x] Full LAN regression validation passed after deploy. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 pnpm --filter @libreplay/web exec playwright test --reporter=line` returned `90 passed (1.5m)`.
+- [blocked] Full production security remains blocked. Evidence: double-submit CSRF token rollout, Redis/distributed rate limiting, real webhook signatures, real providers/secrets, secrets rotation and compliance controls remain open.
 
 ## 2026-06-20 PMO Iteration - Site-Wide CSRF/IDOR Mutation Gate
 
@@ -26,7 +46,7 @@ Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readine
 - [x] Runtime CSRF smoke passed. Evidence: cross-site `POST /api/posts` with `Origin: https://evil.example` and `Sec-Fetch-Site: cross-site` returned `403 INVALID_ORIGIN`.
 - [x] Runtime health, queues and logs are clean. Evidence: `/api/health/deps` reports postgres/redis/minio/meilisearch `ok:true`; `authEmail` and `mediaModeration` waiting/active/delayed/failed all `0`; recent web and worker log greps for `error|exception|failed` returned no matches.
 - [x] Full LAN regression validation passed after deploy. Evidence: `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 pnpm --filter @libreplay/web exec playwright test --reporter=line` returned `90 passed (1.5m)`.
-- [blocked] Full production security remains blocked. Evidence: double-submit CSRF token rollout, Redis/distributed rate limiting, real webhook signatures, events/groups/paid-content/blog BOLA fixes, secrets rotation and compliance controls remain open.
+- [x] Follow-up BOLA/IDOR meta has closed the named remaining gaps. Evidence: `2026-06-20 PMO Iteration - Remaining BOLA Visibility Ownership Gate` covers events/groups/paid-content/blog with source, CI, release, GitOps, runtime and E2E evidence.
 
 ## 2026-06-20 PMO Iteration - Payment Fail-Closed And PSP Abstraction
 
