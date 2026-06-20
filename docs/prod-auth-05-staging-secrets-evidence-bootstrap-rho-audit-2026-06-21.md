@@ -88,7 +88,8 @@ Meta, SMTP and mailbox inputs exist.
   Secret.
 - [x] Source config guardrails pass. Evidence:
   `pnpm --filter @libreplay/config test -- src/__tests__/env.test.ts` returned
-  `24 passed`; `pnpm --filter @libreplay/config typecheck` passed.
+  `24 passed`; source `pnpm test` and `pnpm typecheck` passed after updating
+  auth/web test fixtures to real-shaped staging/production env.
 - [blocked] Source GitHub preflight strict mode blocks on the expected missing
   environment secrets. Evidence: it reports missing `PW_STAGING_AUTH_EMAIL` and
   `PW_STAGING_AUTH_EMAIL_PLUS_CONFIRMED`.
