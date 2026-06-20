@@ -148,11 +148,11 @@ data:
   USE_MOCK_OAUTH: "false"
   PAYMENT_PROVIDER: disabled
   ENABLE_MOCK_PAYMENTS: "false"
-  ENABLE_MOCK_AGE_VERIFICATION: "true"
-  ENABLE_MOCK_FACE_LIVENESS: "true"
-  ENABLE_MOCK_CSAM_SCANNER: "true"
-  ENABLE_MOCK_MEDIA_MODERATION: "true"
-  ENABLE_MOCK_LLM: "true"
+  ENABLE_MOCK_AGE_VERIFICATION: "false"
+  ENABLE_MOCK_FACE_LIVENESS: "false"
+  ENABLE_MOCK_CSAM_SCANNER: "false"
+  ENABLE_MOCK_MEDIA_MODERATION: "false"
+  ENABLE_MOCK_LLM: "false"
   MINIO_ENDPOINT: http://libreplay-minio.libreplay-staging.svc.cluster.local:9000
   MINIO_BUCKET: libreplay-media-staging
   MINIO_REGION: us-east-1
