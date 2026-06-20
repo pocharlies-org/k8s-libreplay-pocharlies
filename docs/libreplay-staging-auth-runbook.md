@@ -1,7 +1,7 @@
 # LibrePlay Staging Auth Runbook
 
 Status: `BLOCKED-BY-REAL-SECRETS`
-Last updated: 2026-06-20 07:40 CEST
+Last updated: 2026-06-20 07:49 CEST
 
 ## Objective
 
@@ -26,7 +26,7 @@ a separate staging environment before production can be considered.
 
 - [x] Argo app `libreplay-staging` exists and targets the contract-only
   staging path. Evidence: `kubectl -n argocd get application libreplay-staging`
-  reports `Synced|Degraded|1648469277e96cd7f8eb7e0e5384a8f837becc70|staging`.
+  reports `Synced|Degraded|cb2c88101b90379310841742adf2cf3e39434626|staging`.
 - [x] Namespace `libreplay-staging` exists with its own `ExternalSecret`.
   Evidence: `kubectl -n libreplay-staging get externalsecret libreplay-secrets`
   reports `SecretSyncedError`, proving the contract exists but Vault data is
@@ -39,8 +39,12 @@ a separate staging environment before production can be considered.
   workloads. Evidence: `Service/libreplay-staging-dns-preflight` is an
   `ExternalName` annotated for external-dns with hostname
   `libreplay-staging.e-dani.com`, target `57.129.17.172` and
-  `cloudflare-proxied=true`; it exists only to let external-dns publish the
-  record before the runtime overlay is synced.
+  `cloudflare-proxied=true`; external-dns created the Cloudflare-proxied record
+  and preflight reports DNS resolution plus TLS handshake OK.
+- [x] Public edge can see future runtime routes. Evidence: infra commit
+  `56da136` adds `libreplay-staging` to the `traefik-edge` CRD/Ingress watched
+  namespace lists; Argo `traefik-edge` is `Synced|Healthy` and the DaemonSet
+  rolled out with provider args containing `libreplay-staging`.
 - [x] Static staging auth contract exists without enabling live staging.
   Evidence: `staging/libreplay-staging-contract.yaml` contains only Namespace,
   `ExternalSecret` and `ConfigMap`; it does not define workloads or ingress.
@@ -177,10 +181,10 @@ email-verification job to drain without failures.
 - `ExternalSecret/harbor-pull` is now part of the staging contract and should
   materialize from `infra/harbor/ci-robot`; verify it with the preflight before
   runtime sync.
-- DNS-only `Service/libreplay-staging-dns-preflight` must be live and external-dns
-  must publish `libreplay-staging.e-dani.com` before TLS/smoke checks can pass.
-- `traefik-edge` must include `libreplay-staging` in its watched namespaces
-  before the runtime `IngressRoute` can be considered public-edge ready.
+- DNS-only `Service/libreplay-staging-dns-preflight` is live and external-dns
+  has published `libreplay-staging.e-dani.com`; current preflight reports DNS
+  and TLS OK.
+- `traefik-edge` includes `libreplay-staging` in its watched namespaces.
 - Runtime overlay exists at `staging/overlays/runtime`, but it is intentionally not wired
   into Argo until real secrets, DNS/TLS and pull-secret handling are validated.
 - Staging DNS/TLS for `libreplay-staging.e-dani.com` has not been proven live.
