@@ -1,7 +1,7 @@
 # LibrePlay Staging Auth Runbook
 
 Status: `BLOCKED-BY-REAL-SECRETS`
-Last updated: 2026-06-20 22:35 CEST
+Last updated: 2026-06-21 01:18 CEST
 
 ## Objective
 
@@ -229,7 +229,10 @@ email-verification job to drain without failures.
   OAuth encryption and SMTP provider keys.
 - Current 1Password re-check is blocked because the Mac `op` account is not
   signed in; prior metadata did not prove LibrePlay-specific OAuth/SMTP items.
-- GitHub environment `staging` and `PW_STAGING_AUTH_EMAIL` are not verified;
-  `gh api repos/pocharlies-org/libreplay/environments` returned no environments.
+- GitHub environment `staging` now exists for repo `pocharlies-org/libreplay`;
+  the required environment secret `PW_STAGING_AUTH_EMAIL` is still absent.
+- Source preflight `scripts/check-libreplay-staging-github-env.sh --strict`
+  verifies the workflow/environment and fails closed on the missing
+  `PW_STAGING_AUTH_EMAIL` secret without printing secret values.
 - No Google/Meta staging callback smoke has been run.
 - No SMTP delivery smoke has been run against a controlled staging mailbox.
