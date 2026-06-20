@@ -19,3 +19,6 @@ Gestionado por ArgoCD desde [k8s-gitops-pocharlies](https://github.com/pocharlie
   Contrato `staging` aplicado en modo contract-only; runtime bloqueado hasta
   que `scripts/check-libreplay-staging-preflight.sh --strict` pase:
   [staging/libreplay-staging-contract.yaml](staging/libreplay-staging-contract.yaml).
+- 2026-06-20: Contrato `production` estático preparado en modo contract-only;
+  no define workloads/ingress y falla cerrado con todos los mocks desactivados:
+  [production/libreplay-production-contract.yaml](production/libreplay-production-contract.yaml).
