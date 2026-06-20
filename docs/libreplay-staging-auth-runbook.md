@@ -1,7 +1,7 @@
 # LibrePlay Staging Auth Runbook
 
 Status: `BLOCKED-BY-REAL-SECRETS`
-Last updated: 2026-06-20 08:56 CEST
+Last updated: 2026-06-20 09:23 CEST
 
 ## Objective
 
@@ -31,7 +31,7 @@ a separate staging environment before production can be considered.
 
 - [x] Argo app `libreplay-staging` exists and targets the contract-only
   staging path. Evidence: `kubectl -n argocd get application libreplay-staging`
-  reports `Synced|Degraded|cb2c88101b90379310841742adf2cf3e39434626|staging`.
+  reports `Synced|Degraded|f65342d1c1b8090c29e02092b11f1b8143994dca|staging`.
 - [x] Namespace `libreplay-staging` exists with its own `ExternalSecret`.
   Evidence: `kubectl -n libreplay-staging get externalsecret libreplay-secrets`
   reports `SecretSyncedError`, proving the contract exists but Vault data is
@@ -196,15 +196,16 @@ email-verification job to drain without failures.
 - `ExternalSecret/libreplay-secrets` is `Ready=False SecretSyncedError` because
   `secret/libreplay/staging` provider data is missing in Vault.
 - `ExternalSecret/harbor-pull` is now part of the staging contract and should
-  materialize from `infra/harbor/ci-robot`; verify it with the preflight before
-  runtime sync.
+  materialize from `infra/harbor/ci-robot`; current preflight verifies it as OK,
+  but it must be checked again immediately before runtime sync.
 - DNS-only `Service/libreplay-staging-dns-preflight` is live and external-dns
   has published `libreplay-staging.e-dani.com`; current preflight reports DNS
   and TLS OK.
 - `traefik-edge` includes `libreplay-staging` in its watched namespaces.
 - Runtime overlay exists at `staging/overlays/runtime`, but it is intentionally not wired
   into Argo until real secrets, DNS/TLS and pull-secret handling are validated.
-- Staging DNS/TLS for `libreplay-staging.e-dani.com` has not been proven live.
+- Staging DNS/TLS for `libreplay-staging.e-dani.com` is proven live at the
+  contract/preflight level, but runtime workloads are still intentionally absent.
 - Current `libreplay-secrets` in namespace `libreplay` lacks Google, Facebook,
   OAuth encryption and SMTP provider keys.
 - No Google/Meta staging callback smoke has been run.
