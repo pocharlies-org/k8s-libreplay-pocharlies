@@ -4,6 +4,7 @@ namespace: libreplay-staging
 resources:
   - ../../../k8s
   - harbor-pull.externalsecret.yaml
+  - cloudflare-ipallowlist.middleware.yaml
 
 patches:
   - path: patch-namespace.json

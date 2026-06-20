@@ -18,6 +18,8 @@ data:
   RATE_LIMIT_REDIS_PREFIX: libreplay:rl
   RATE_LIMIT_FAIL_MODE: closed
   RATE_LIMIT_TIMEOUT_MS: "250"
+  TRUST_PROXY_CLIENT_IP: "true"
+  TRUSTED_CLIENT_IP_HEADER: cf-connecting-ip
   AUTH_EMAIL_PROVIDER: smtp
   MAIL_FROM: LibrePlay <noreply@libreplay.e-dani.com>
   SMTP_SECURE: "true"

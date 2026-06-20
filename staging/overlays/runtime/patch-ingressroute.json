@@ -16,6 +16,8 @@
     - match: Host(`libreplay-staging.e-dani.com`)
       kind: Rule
       priority: 300
+      middlewares:
+        - name: libreplay-staging-cloudflare-only
       services:
         - name: libreplay-web
           port: 80

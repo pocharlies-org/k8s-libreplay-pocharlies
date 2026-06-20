@@ -52,6 +52,8 @@ AUTH_EMAIL_PROVIDER=smtp
 PAYMENT_PROVIDER=disabled
 ENABLE_MOCK_PAYMENTS=false
 ENABLE_LAN_DEMO_LOGIN=false
+TRUST_PROXY_CLIENT_IP=true
+TRUSTED_CLIENT_IP_HEADER=cf-connecting-ip
 "
 
 scripts/check-libreplay-staging-contract.sh --static >/dev/null

@@ -56,6 +56,8 @@ data:
   RATE_LIMIT_REDIS_PREFIX: libreplay:rl
   RATE_LIMIT_FAIL_MODE: closed
   RATE_LIMIT_TIMEOUT_MS: "250"
+  TRUST_PROXY_CLIENT_IP: "false"
+  TRUSTED_CLIENT_IP_HEADER: x-forwarded-for
   AUTH_EMAIL_PROVIDER: console
   MAIL_FROM: LibrePlay <noreply@libreplay.local>
   SMTP_SECURE: "false"
@@ -338,7 +340,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: demo-visual-wash-20260620-0625
+        libreplay.e-dani.com/config-rollout: trusted-client-ip-20260620-0825
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -346,7 +348,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-006088f2bdcc@sha256:dc670d08fb8b990c9e48160129b08c122ee134d45fd63cf47aefa09aec723d49
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-b7cd8097bb02@sha256:24647560812ceed10e5643d14f90a0fbd084a86b8b73087c5f3271360bfdb18a
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -405,7 +407,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: demo-visual-wash-20260620-0625
+        libreplay.e-dani.com/config-rollout: trusted-client-ip-20260620-0825
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -413,7 +415,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-006088f2bdcc@sha256:69d2f71610bfe03b35eabb3c78e513892983a6163157489d5cabb85cbfb41d6b
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-b7cd8097bb02@sha256:24c63701d3190485f8a165ec8dcc7d2f4168944ebcb740141dd98c38785c94f6
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
