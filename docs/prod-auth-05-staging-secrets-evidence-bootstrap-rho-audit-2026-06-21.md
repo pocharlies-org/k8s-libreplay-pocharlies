@@ -56,6 +56,15 @@ Meta, SMTP and mailbox inputs exist.
 - [x] Source GitHub workflow requires mailbox delivery confirmation. Evidence:
   `.github/workflows/staging-real-auth.yml` reads
   `PW_STAGING_AUTH_EMAIL_PLUS_CONFIRMED` and validates it equals `1`.
+- [x] Source hardening was released and deployed to LAN. Evidence: source head
+  `707a837 test(auth): align staging env fixtures`; source CI run
+  `27887682406` passed; Release Image run `27887825746` passed for
+  `sha-707a8375192c`; GitOps commit `69e7504 fix: deploy staging auth
+  hardening` deployed web digest
+  `sha256:8b47b9d204b84b86d3ede7fde6bb9ea21385ac788919f8d2a433f007a47f2366`
+  and worker digest
+  `sha256:e293049e21eb638a411438bef1d4677075ed7cebbf80aa224732b51a1ea16974`;
+  GitOps CI run `27888042812` passed.
 - [blocked] Vault record exists and preflight is strict-green. Blocker:
   approved real provider values and evidence have not been supplied.
 
@@ -90,9 +99,26 @@ Meta, SMTP and mailbox inputs exist.
   `pnpm --filter @libreplay/config test -- src/__tests__/env.test.ts` returned
   `24 passed`; source `pnpm test` and `pnpm typecheck` passed after updating
   auth/web test fixtures to real-shaped staging/production env.
+- [x] GitOps deploy validation passed. Evidence: `git diff --check`,
+  `kubectl apply --dry-run=server -f k8s/manifest.yaml`, `kubectl kustomize
+  k8s` and no-`:latest` checks passed before commit `69e7504`.
+- [x] Runtime deploy is reconciled. Evidence: Argo `libreplay` is
+  `Synced|Healthy|69e7504514ea1f103c0f6b42084e813aa73f3660|k8s`;
+  `libreplay-staging` is expected
+  `Synced|Degraded|69e7504514ea1f103c0f6b42084e813aa73f3660|staging`; web and
+  worker deployments are `1/1` on the `707a8375192c` digest-pinned images.
+- [x] Runtime regression passed after deploy. Evidence: `/api/health/deps`
+  returned `ok:true` for postgres, redis, queues, minio and meilisearch; full
+  LAN Playwright returned `97 passed (1.6m)`; 10-minute web and worker log
+  scans for `p1001|readablestream|already closed|error|exception|failed|unhandled`
+  returned no matches.
 - [blocked] Source GitHub preflight strict mode blocks on the expected missing
   environment secrets. Evidence: it reports missing `PW_STAGING_AUTH_EMAIL` and
   `PW_STAGING_AUTH_EMAIL_PLUS_CONFIRMED`.
+- [blocked] Staging preflight strict mode blocks on the expected missing Vault
+  data. Evidence: it reports only `ExternalSecret/libreplay-secrets` not ready
+  and absent materialized `Secret/libreplay-secrets`; `harbor-pull`, DNS and TLS
+  remain OK.
 - [x] `git diff --check` passed in source and GitOps.
 
 ## Residual Blockers
