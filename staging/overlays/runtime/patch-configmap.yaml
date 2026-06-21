@@ -34,6 +34,7 @@ data:
   ENABLE_MOCK_CSAM_SCANNER: "false"
   ENABLE_MOCK_MEDIA_MODERATION: "false"
   ENABLE_MOCK_LLM: "false"
+  MEDIA_DELIVERY_MODE: proxy
   MINIO_ENDPOINT: http://libreplay-minio.libreplay-staging.svc.cluster.local:9000
   MINIO_BUCKET: libreplay-media-staging
   MINIO_REGION: us-east-1

@@ -407,7 +407,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-5f9ec801fc3f@sha256:693d56684c163c0b85734c9f0a100ff2248cc6876d5f052d6eb7b3913f2012c9
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-ed6e4ad14ef0@sha256:cf0b8c08d2699ba1dc60499914c92f05501dfb0650cdfa9bb186d1e6cd49c6e5
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -485,7 +485,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-5f9ec801fc3f@sha256:95961909fbe77cdcc82bba5fa75e2d770de791fb1ca14333501ab6168bd64491
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-ed6e4ad14ef0@sha256:3c8236f27fec56f4e86018fadc95438f09626a24b58fe05b2966211f21f1cb61
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
