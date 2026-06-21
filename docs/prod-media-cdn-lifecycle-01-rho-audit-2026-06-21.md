@@ -87,9 +87,10 @@ approved.
 
 - [blocked] No CDN/signed object delivery cutover exists. Current serving remains
   authorized first-party `/api/media` proxy with private cache headers.
-- [blocked] No DB-backed media retention/delete lifecycle exists. Missing:
-  `MediaAsset` retention class, delete/purge timestamps, purge worker, dry-run
-  report, S3 delete of originals/variants and orphan cleanup.
+- [blocked] DB-backed media retention/delete lifecycle is only partially
+  closed. `MediaAsset` retention class, delete/purge timestamps and default
+  dry-run planner now exist in source `50e1d14`, but physical S3 purge,
+  orphan cleanup and legal/versioning sign-off remain intentionally blocked.
 - [blocked] No real CSAM/media moderation providers are configured for staging
   or production.
 - [blocked] No production media legal/retention policy has been approved for
