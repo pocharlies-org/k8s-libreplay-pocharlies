@@ -1,0 +1,65 @@
+# ── LibrePlay process-level HA (stateless web + worker only) ──────────────────
+# Resilience at the process level for the stateless app tier:
+#   * PodDisruptionBudget keeps >=1 replica serving through voluntary
+#     disruptions (node drains, rollouts).
+#   * HorizontalPodAutoscaler scales each workload 2..4 on CPU pressure.
+# The stateful data plane (Postgres / Redis / Meili / MinIO / Mailpit) is
+# intentionally untouched here.
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: libreplay-web
+  namespace: libreplay
+spec:
+  minAvailable: 1
+  selector: { matchLabels: { app: libreplay-web } }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: libreplay-worker
+  namespace: libreplay
+spec:
+  minAvailable: 1
+  selector: { matchLabels: { app: libreplay-worker } }
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: libreplay-web
+  namespace: libreplay
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: libreplay-web
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: libreplay-worker
+  namespace: libreplay
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: libreplay-worker
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

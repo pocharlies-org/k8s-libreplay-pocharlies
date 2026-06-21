@@ -392,7 +392,7 @@ metadata:
     argocd.argoproj.io/sync-options: Replace=true
     argocd.argoproj.io/sync-wave: "4"
 spec:
-  replicas: 1
+  replicas: 2
   revisionHistoryLimit: 1
   selector: { matchLabels: { app: libreplay-web } }
   template:
@@ -405,6 +405,12 @@ spec:
       imagePullSecrets:
         - name: harbor-pull
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app: libreplay-web }
       containers:
         - name: libreplay-web
           image: harbor.e-dani.com/homelab/libreplay-web:sha-28d1464443b1@sha256:503d6a8d52f180a4b141fdfde5c418d2427fad962d3bfba1a03509a822fb3b83
@@ -470,7 +476,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "4"
 spec:
-  replicas: 1
+  replicas: 2
   revisionHistoryLimit: 1
   selector: { matchLabels: { app: libreplay-worker } }
   template:
@@ -483,6 +489,12 @@ spec:
       imagePullSecrets:
         - name: harbor-pull
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app: libreplay-worker }
       containers:
         - name: libreplay-worker
           image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-28d1464443b1@sha256:01514d2fbff953b0828956f944882219167c93c9094d57d80470a2be89fbfd5d
