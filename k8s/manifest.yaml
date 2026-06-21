@@ -60,7 +60,7 @@ data:
   TRUSTED_CLIENT_IP_HEADER: x-forwarded-for
   LOG_LEVEL: info
   ERROR_TRACKING_PROVIDER: none
-  LIBREPLAY_VERSION: 0aaba2176f14
+  LIBREPLAY_VERSION: 7b6b3a7e8703
   AUTH_EMAIL_PROVIDER: console
   MAIL_FROM: LibrePlay <noreply@libreplay.local>
   SMTP_SECURE: "false"
@@ -416,7 +416,7 @@ spec:
             matchLabels: { app: libreplay-web }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-0aaba2176f14@sha256:27a51d2abac013f758cba6a5d06f601835353741a98884ce8cca9a2fb164367a
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-7b6b3a7e8703@sha256:51d4d2e891e32260080c46ad75df9545587e602641cdb7c929d77118a6dd39c4
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -500,7 +500,7 @@ spec:
             matchLabels: { app: libreplay-worker }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-0aaba2176f14@sha256:a01b4b8522ccdb4deb85cc8639491f019e976d6b02baf5ac3c9bdafedcf3dfe9
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-7b6b3a7e8703@sha256:11f23936bcddceddd5f445a467e10214e71ea44b58968e09627a4bab9dbffeb2
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
