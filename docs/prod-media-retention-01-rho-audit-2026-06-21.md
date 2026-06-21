@@ -9,9 +9,9 @@
 - [x] Source implementation is validated. Evidence: `pnpm typecheck`, focused web security test `25/25`, jobs tests `14/14`, media permissions `5/5`, source CI `27888886986`, Release Image `27889021579`.
 - [x] Immutable images are available. Evidence: web `sha-50e1d14f0987@sha256:0bcf80e464325668d1aa263bde3485e9f668f99a319635c4d587be652b39bf9c`, worker `worker-sha-50e1d14f0987@sha256:a9bba292e637880cec2e45f78950dfab9cc8095937d084dcd646f9b75d1ec1ee`, tools `tools-sha-50e1d14f0987@sha256:d3a380a9fafceaf4abe629cf22f2e3e4e1e060b353963a8c15767ee794edc013`.
 - [x] GitOps manifest is prepared. Evidence: `k8s/manifest.yaml` updates web/worker image pins and adds `Job/libreplay-db-migrate-50e1d14`.
-- [ ] GitOps CI passed. Evidence: pending.
-- [ ] Argo rollout and migration job completed. Evidence: pending.
-- [ ] Runtime health, retention dry-run and focused E2E passed. Evidence: pending.
+- [x] GitOps CI passed. Evidence: GitOps run `27889214576` completed `success`.
+- [x] Argo rollout and migration job completed. Evidence: Argo `libreplay` is `Synced|Healthy|02c806c4df54bb3a1e493cd9dbf6fd8ad3bea694|k8s`; `Job/libreplay-db-migrate-50e1d14` completed and migration logs show `20260621003500_media_retention_lifecycle` applied successfully.
+- [x] Runtime health, retention dry-run and focused E2E passed. Evidence: `/api/health/deps` returned `ok:true`; runtime dry-run returned `dryRun=true`, `20` stale pending candidates and no object keys; DB status summary remains `PENDING_UPLOAD|ACTIVE|46` and `APPROVED|ACTIVE|193`; focused LAN media/payment E2E returned `5 passed (7.9s)`; 10-minute web/worker error greps returned no matches.
 
 ## Residual Risks
 - [blocked] Real right-to-erasure/export workflow is still missing.

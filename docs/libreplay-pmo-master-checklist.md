@@ -1,7 +1,7 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-21 03:03 CEST
+Last updated: 2026-06-21 03:07 CEST
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
@@ -13,7 +13,7 @@ Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readine
 - [x] Retention planner is default-safe. Evidence: `packages/jobs/src/handlers/media-retention.ts` defaults to dry-run, CLI requires `--execute` or `MEDIA_RETENTION_EXECUTE=1`, summaries omit object keys, and physical S3 delete is not invoked.
 - [x] Planner protects live/legal references. Evidence: relation blockers cover posts, albums, messages, profile/event/date/blog covers, content participants, PPV, paid content, verification evidence, consent documents, open reports and moderation cases; intrinsic blockers cover demo media, `verification/` object keys, legal holds and `csam_match`.
 - [x] Source CI and release passed. Evidence: local `pnpm typecheck`, focused job/media/web tests, source CI `27888886986`, and Release Image `27889021579` completed `success` for `50e1d14`.
-- [ ] Runtime migration/rollout validated. Evidence: pending GitOps apply, migration Job completion, health, logs and focused E2E.
+- [x] Runtime migration/rollout validated. Evidence: GitOps commit `02c806c`, GitOps CI `27889214576`, Argo `Synced|Healthy|02c806c4df54bb3a1e493cd9dbf6fd8ad3bea694|k8s`, migration Job `libreplay-db-migrate-50e1d14` completed, web/worker images are on `50e1d14` digests, `/api/health/deps` is healthy, retention dry-run returned `dryRun=true` with `20` stale pending candidates and no object keys, DB status summary remains `PENDING_UPLOAD|ACTIVE|46` and `APPROVED|ACTIVE|193`, focused media/payment E2E returned `5 passed (7.9s)`, and 10-minute web/worker log greps returned no matches.
 - [blocked] Full production media lifecycle remains incomplete. Evidence: physical S3 purge/orphan cleanup is intentionally blocked pending legal/MinIO-versioning decision; CDN/signed delivery, backup/restore, real CSAM/media moderation and worker scaling remain open.
 
 ## 2026-06-21 PMO Iteration - Media Storage Lifecycle Gate
