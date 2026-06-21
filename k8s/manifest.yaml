@@ -157,7 +157,7 @@ spec:
       containers:
         - name: redis
           image: redis:7-alpine
-          command: [redis-server, --appendonly, "yes"]
+          command: [redis-server, --appendonly, "yes", --maxmemory-policy, noeviction]
           resources:
             requests: { cpu: 20m, memory: 32Mi }
             limits: { memory: 256Mi }
@@ -413,7 +413,7 @@ spec:
             matchLabels: { app: libreplay-web }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-fb4847f77703@sha256:dbcb13fe9a469b4ad7f4e8d69fa52c6af3db1e9f3578a56a372b32a0dced1f44
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-140431d86db3@sha256:f21e6e5212273f1ec22001b169e5b6324c0a02fd2b706421709dbb7ac9368192
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -497,7 +497,7 @@ spec:
             matchLabels: { app: libreplay-worker }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-fb4847f77703@sha256:e7454b50143c58f29cba05473e3f368c6d2cbdb7846bc0eb6a31f62ec1bccbe6
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-140431d86db3@sha256:6fec50512d5e7578e540beef0351ce6cf8c7d627ac59dd9f1b4f00b60531d122
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
