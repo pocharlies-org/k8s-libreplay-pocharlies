@@ -1,7 +1,7 @@
 # LibrePlay PMO Master Checklist
 
 Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-21 21:13 CEST
+Last updated: 2026-06-21 21:26 CEST
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
@@ -14,6 +14,7 @@ Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readine
 - [x] SLO proxy alerts are declared. Evidence: `k8s/vmrule.yaml` adds group `libreplay.synthetics` with `LibrePlaySyntheticDown`, `LibrePlaySyntheticLatencyHigh` and `LibrePlaySyntheticAvailabilityBudgetLow`.
 - [x] Staging runtime cannot inherit the LAN synthetic. Evidence: `staging/overlays/runtime/patch-delete-lan-vmprobe.yaml` and `patch-remove-lan-synthetics-vmrule.json` delete the base LAN probe and synthetic alert group from staging runtime render.
 - [x] Static synthetics contract passes. Evidence: `scripts/check-libreplay-synthetics-contract.sh` validates VMProbe target/module/no-auth/no-`/deps`, kustomization wiring, staging exclusion and VMRule alerts.
+- [x] GitOps deployment and runtime validation passed. Evidence: commit `7614cd6 feat(libreplay): add LAN uptime synthetics` is pushed; CI run `27914911079` completed `success`; Argo `libreplay` reports `Synced|Healthy|7614cd6d259ae4e58fb6dd44c3910e8801c1d8a3|Succeeded`; live `VMProbe/libreplay-lan-synthetic` and `VMRule/libreplay-runtime` are `operational`; blackbox returns `probe_success 1` and HTTP `200`; VictoriaMetrics has `probe_success{job="libreplay-lan-synthetic"}=1`; VMAlert loads the three `LibrePlaySynthetic*` rules as `inactive` with `health=ok` and no active synthetic alerts.
 - [blocked] Full observability remains incomplete. Evidence: this gate closes uptime synthetic and a short-window SLO proxy only; structured logs, error tracking, alert fire/route rehearsal, full multi-window error-budget policy and recurrence/root-cause cleanup remain open.
 
 ## 2026-06-21 PMO Iteration - Backup Credential Contract Phase A
