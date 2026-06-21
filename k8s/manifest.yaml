@@ -413,7 +413,7 @@ spec:
             matchLabels: { app: libreplay-web }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-28d1464443b1@sha256:503d6a8d52f180a4b141fdfde5c418d2427fad962d3bfba1a03509a822fb3b83
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-fb4847f77703@sha256:dbcb13fe9a469b4ad7f4e8d69fa52c6af3db1e9f3578a56a372b32a0dced1f44
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -497,7 +497,7 @@ spec:
             matchLabels: { app: libreplay-worker }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-28d1464443b1@sha256:01514d2fbff953b0828956f944882219167c93c9094d57d80470a2be89fbfd5d
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-fb4847f77703@sha256:e7454b50143c58f29cba05473e3f368c6d2cbdb7846bc0eb6a31f62ec1bccbe6
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
