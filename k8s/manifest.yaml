@@ -56,7 +56,7 @@ data:
   RATE_LIMIT_REDIS_PREFIX: libreplay:rl
   RATE_LIMIT_FAIL_MODE: closed
   RATE_LIMIT_TIMEOUT_MS: "250"
-  TRUST_PROXY_CLIENT_IP: "false"
+  TRUST_PROXY_CLIENT_IP: "true"
   TRUSTED_CLIENT_IP_HEADER: x-forwarded-for
   AUTH_EMAIL_PROVIDER: console
   MAIL_FROM: LibrePlay <noreply@libreplay.local>
@@ -399,7 +399,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: auth-email-gate-20260621-52d1a14d2d37
+        libreplay.e-dani.com/config-rollout: trust-proxy-20260621
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -477,7 +477,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: auth-email-gate-20260621-52d1a14d2d37
+        libreplay.e-dani.com/config-rollout: trust-proxy-20260621
     spec:
       enableServiceLinks: false
       imagePullSecrets:
