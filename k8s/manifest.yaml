@@ -399,7 +399,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: auth-disabled-account-20260621-be3ad25c8cb6
+        libreplay.e-dani.com/config-rollout: auth-email-gate-20260621-52d1a14d2d37
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -407,7 +407,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-be3ad25c8cb6@sha256:4911b210a5d078a9093a13f9074ac47ea40edff7d82e5ab228da15fc5183cb9b
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-52d1a14d2d37@sha256:0fcac38fd3e5d9a7963132f99ec90e9965cff55614968553b2510c9016809d40
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -477,7 +477,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: auth-disabled-account-20260621-be3ad25c8cb6
+        libreplay.e-dani.com/config-rollout: auth-email-gate-20260621-52d1a14d2d37
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -485,7 +485,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-be3ad25c8cb6@sha256:c70d11b0261c300fac32b12ba059b425e0e28f25bf19fd746c675309f6a2befc
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-52d1a14d2d37@sha256:c1a27c9fb0926bf89cbfd27e390bf976b874b22cd5b4ec42397ec2edda563e4a
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
