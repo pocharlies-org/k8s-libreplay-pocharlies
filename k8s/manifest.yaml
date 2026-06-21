@@ -340,7 +340,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: next-mobile-pwa-01-20260621-be5555f9dc0f
+        libreplay.e-dani.com/config-rollout: staging-auth-hardening-20260621-707a8375192c
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -348,7 +348,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-be5555f9dc0f@sha256:97308d307d17ba51ad0e9b1b39246b4621572d92fa0762199350407402f2f8e4
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-707a8375192c@sha256:8b47b9d204b84b86d3ede7fde6bb9ea21385ac788919f8d2a433f007a47f2366
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -418,7 +418,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: next-mobile-pwa-01-20260621-be5555f9dc0f
+        libreplay.e-dani.com/config-rollout: staging-auth-hardening-20260621-707a8375192c
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -426,7 +426,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-be5555f9dc0f@sha256:b916acfa1298d4bec0910c704485c527f7ab15aac13b96dc706d67207d5145b2
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-707a8375192c@sha256:e293049e21eb638a411438bef1d4677075ed7cebbf80aa224732b51a1ea16974
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
