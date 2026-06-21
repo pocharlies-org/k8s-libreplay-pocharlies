@@ -127,7 +127,7 @@ spec:
           expr: avg_over_time(probe_success{job="libreplay-lan-synthetic",app="libreplay",endpoint="health"}[1h]) < 0.99
           for: 5m
           labels:
-            severity: warn
+            severity: warning
             area: slo
             app: libreplay
           annotations:
