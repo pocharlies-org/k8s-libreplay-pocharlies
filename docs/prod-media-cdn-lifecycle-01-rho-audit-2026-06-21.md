@@ -2,7 +2,7 @@
 
 Date: 2026-06-21
 Owner: PMO / DevOps / Backend-Media / Security
-Status: `IMPLEMENTED-PENDING-LIVE-DEPLOY`
+Status: `DEPLOYED-LAN-VALIDATED-BLOCKED-BY-CDN-RETENTION-PROVIDERS`
 
 ## Objective
 
@@ -40,8 +40,11 @@ approved.
   renders `staging/overlays/runtime` and checks
   `Job/libreplay-minio-policy-20260621` in `libreplay-staging` targeting
   `libreplay-media-staging`.
-- [blocked] Live bucket policy is applied in LAN. Blocker: GitOps commit is not
-  deployed yet in this document revision.
+- [x] Live bucket policy is applied in LAN. Evidence: GitOps commit
+  `9848ef4 feat(media): add minio lifecycle policy gate`; GitOps CI run
+  `27888429666` passed; Argo `libreplay` is
+  `Synced|Healthy|9848ef458cca0c6c2c0645cea4bf0e292b8a9346|k8s`; live Job
+  `libreplay-minio-policy-20260621` succeeded.
 
 ## Specialist Checks
 
@@ -49,9 +52,11 @@ approved.
   current upload, compression, video/HLS, worker and serving flows are in place,
   and identified missing CDN/signed delivery plus DB lifecycle/retention schema.
 - [x] DevOps/Storage PMO pass completed. Evidence: manifest dry-run, kustomize
-  render and static verifier passed locally before commit.
-- [blocked] Independent DevOps/Storage subagent pass is still pending. Blocker:
-  subagent had not returned before this document revision.
+  render, static verifier, GitOps CI, Argo and live Job verification passed.
+- [x] Independent DevOps/Storage subagent pass completed read-only. Evidence:
+  James confirmed static production media contract exists, LAN MinIO/PVC are
+  healthy, lifecycle/versioning was missing before this gate, CDN/backup/HA
+  remain open, and recommended an idempotent MinIO policy job plus verification.
 
 ## Verification Commands
 
@@ -61,8 +66,22 @@ approved.
 - [x] `kubectl kustomize k8s` and `kubectl kustomize staging/overlays/runtime`
   render the policy Job with versioning and noncurrent lifecycle controls.
 - [x] `git diff --check` passed.
-- [blocked] `scripts/check-libreplay-media-storage-policy.sh --live` is pending
-  until Argo creates and completes the Job.
+- [x] GitOps CI run `27888429666` passed with no-`:latest`, YAML,
+  kubeconform and Kustomize render checks.
+- [x] `scripts/check-libreplay-media-storage-policy.sh --live` passed.
+- [x] Live Job logs prove the policy. Evidence: MinIO reported
+  `versioning is enabled`; lifecycle rule `d8rj0au5vkbs7hha9tkg` is enabled
+  with delete-marker expiration, noncurrent expiration after `30` days and
+  `KEEP VERSIONS=2`.
+- [x] Media runtime still works after bucket policy. Evidence:
+  `NODE_TLS_REJECT_UNAUTHORIZED=0 BASE_URL=https://libreplay.lan.e-dani.com
+  PWRETRIES=0 pnpm --filter @libreplay/web exec playwright test
+  e2e/33-payments-media.auth.spec.ts --project=member --reporter=line`
+  returned `5 passed (7.1s)`.
+- [x] Runtime health and logs are clean after the change. Evidence:
+  `/api/health/deps` returned `ok:true`; 5-minute web and worker log scans for
+  `p1001|readablestream|already closed|error|exception|failed|unhandled`
+  returned no matches.
 
 ## Residual Blockers
 
