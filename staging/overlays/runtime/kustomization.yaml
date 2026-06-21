@@ -24,7 +24,19 @@ patches:
       version: v1beta1
       kind: VMRule
       name: libreplay-runtime
+  - path: patch-remove-lan-synthetics-vmrule.json
+    target:
+      group: operator.victoriametrics.com
+      version: v1beta1
+      kind: VMRule
+      name: libreplay-runtime
   - path: patch-disable-lan-dashboard.yaml
+  - path: patch-delete-lan-vmprobe.yaml
+    target:
+      group: operator.victoriametrics.com
+      version: v1beta1
+      kind: VMProbe
+      name: libreplay-lan-synthetic
   - path: patch-vmservicescrape.yaml
   - path: patch-ingressroute.json
     target:

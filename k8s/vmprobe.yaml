@@ -1,0 +1,25 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMProbe
+metadata:
+  name: libreplay-lan-synthetic
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: libreplay
+    app.kubernetes.io/part-of: libreplay
+spec:
+  jobName: libreplay-lan-synthetic
+  interval: 30s
+  scrapeTimeout: 10s
+  module: http_alive_tls
+  vmProberSpec:
+    url: blackbox-exporter.monitoring.svc.cluster.local:9115
+    path: /probe
+  targets:
+    staticConfig:
+      labels:
+        app: libreplay
+        scope: lan
+        synthetic: uptime
+        endpoint: health
+      targets:
+        - https://libreplay.lan.e-dani.com/api/health

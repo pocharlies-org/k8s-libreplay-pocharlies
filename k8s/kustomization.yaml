@@ -5,4 +5,5 @@ resources:
   - ha.yaml
   - grafana-dashboard.yaml
   - vmservicescrape.yaml
+  - vmprobe.yaml
   - vmrule.yaml

@@ -1,0 +1,5 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMProbe
+metadata:
+  name: libreplay-lan-synthetic
+$patch: delete
