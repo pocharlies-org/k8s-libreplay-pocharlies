@@ -321,6 +321,65 @@ spec:
           resources:
             requests: { cpu: 20m, memory: 64Mi }
             limits: { memory: 256Mi }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: libreplay-minio-policy-20260621
+  namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    libreplay.e-dani.com/media-policy: "versioning-noncurrent-lifecycle"
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels: { app: libreplay-minio-policy }
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      containers:
+        - name: minio-policy
+          image: minio/mc:RELEASE.2024-09-16T17-43-14Z
+          envFrom:
+            - configMapRef: { name: libreplay-config }
+          env:
+            - name: MINIO_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_ACCESS_KEY } }
+            - name: MINIO_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_SECRET_KEY } }
+            - { name: MINIO_NONCURRENT_EXPIRE_DAYS, value: "30" }
+            - { name: MINIO_NONCURRENT_RETAIN_NEWER, value: "2" }
+          command: [sh, -lc]
+          args:
+            - |
+              set -eu
+              target="local/${MINIO_BUCKET}"
+              until mc alias set local "${MINIO_ENDPOINT}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}" >/dev/null 2>&1; do
+                echo "waiting for MinIO"
+                sleep 2
+              done
+              mc mb -p "${target}" || true
+              mc version enable "${target}" || true
+              echo "libreplay-minio-policy: versioning ensured"
+              existing="$(mc ilm rule ls "${target}" 2>/dev/null || true)"
+              if [ -z "${existing}" ]; then
+                mc ilm rule add \
+                  --noncurrent-expire-days "${MINIO_NONCURRENT_EXPIRE_DAYS}" \
+                  --noncurrent-expire-newer "${MINIO_NONCURRENT_RETAIN_NEWER}" \
+                  --expire-delete-marker \
+                  "${target}"
+              else
+                echo "existing lifecycle rules found; keeping current bucket policy"
+              fi
+              echo "libreplay-minio-policy: lifecycle ensured noncurrent_expire_days=${MINIO_NONCURRENT_EXPIRE_DAYS} noncurrent_retain_newer=${MINIO_NONCURRENT_RETAIN_NEWER}"
+              mc version info "${target}"
+              mc ilm rule ls "${target}"
+          resources:
+            requests: { cpu: 20m, memory: 64Mi }
+            limits: { memory: 256Mi }
 
 # ── LibreReplay web (stateless) ───────────────────────────────────────────────
 ---
