@@ -53,13 +53,29 @@ Scope: unblock `ExternalSecret/libreplay-secrets` in namespace `libreplay-stagin
 
 ## Current Evidence
 
-- `scripts/check-libreplay-staging-preflight.sh --strict` on 2026-06-21 currently reports exactly two blockers: `ExternalSecret/libreplay-secrets` is `Ready=False|SecretSyncedError`, and `Secret/libreplay-secrets` is not materialized.
-- The same preflight reports Argo `libreplay-staging` as `Synced|Degraded` on path `staging`, validates the staging config posture, confirms no runtime workloads are present, verifies `harbor-pull`, and proves DNS/TLS for `libreplay-staging.e-dani.com`.
-- `ExternalSecret/harbor-pull` in the same namespace is `Ready=True`, so the Vault store and ESO controller are working.
+Latest independent verification: **2026-06-24** (Claude verifier, read-only). Report:
+`.rho/claude-subagents/libreplay/prod-10a-real-auth-smtp-staging-current/verifier-minimal.report.md`.
+Verdict: **BLOCKED, fail-closed** (`BLOCKED_BY_EXTERNAL_CREDENTIALS_AND_PROVIDER_EVIDENCE`
+independently verified TRUE). No secret values were printed or recorded. Current Argo
+revision for both apps: `ce67574` on `deploy/prod` (source `main` HEAD `48a9dd0`).
+
+> Run the evidence script with **bash** (`bash scripts/check-libreplay-staging-secret-evidence.sh --strict`)
+> or execute it directly (`./scripts/check-libreplay-staging-secret-evidence.sh --strict`).
+> It is Bash-only (`set -o pipefail`, `[[ ... ]]`, `${!var}`); running it under POSIX `sh`/dash
+> now exits early with a clear "requires bash" message (exit 2) instead of pipefail noise.
+
+State confirmed on 2026-06-24:
+
+- `scripts/check-libreplay-staging-preflight.sh --strict` reports exactly **two blockers**: `ExternalSecret/libreplay-secrets` is `Ready=False|SecretSyncedError` ("could not get secret data from provider"), and `Secret/libreplay-secrets` is **not materialized** (absent).
+- `scripts/check-libreplay-staging-secret-evidence.sh --strict` (run with bash) reports **seven blockers**: provider callbacks, Google redirect URI, Facebook redirect URI, SMTP sender confirmation, SMTP sender identity (mail-from), controlled mailbox, and plus-addressing confirmation. No values were printed.
+- Argo `libreplay` is `Synced|Healthy` (path `k8s`); `libreplay-staging` is `Synced|Degraded` (path `staging`) — both at rev `ce67574`, target `deploy/prod`. Degraded is **expected**: contract-only, **0 pods**, no runtime workloads.
+- `ExternalSecret/harbor-pull` in `libreplay-staging` is `Ready=True` (SecretSynced) and `secret/harbor-pull` (dockerconfigjson) is present, so the Vault store and ESO controller are working; the failure is specifically the missing Vault record `secret/libreplay/staging`.
+- `svc/libreplay-staging-dns-preflight` is an ExternalName placeholder; runtime overlay check passes dry-run and stays fail-closed (mocks disabled, staging Vault path, public HTTPS host, Cloudflare edge allowlist).
 - ESO logs confirm the exact provider error: `secret/libreplay/staging` does not exist.
 - A Vault metadata read from `vault-0` without an authorized token returned `403 permission denied`; do not bypass Vault access policy.
 - Prior 1Password metadata search found no item named LibrePlay or SauvagePlay for OAuth/SMTP. Current re-check is blocked because the Mac 1Password CLI reports `account is not signed in`.
 - GitHub repo `pocharlies-org/libreplay` has environment `staging`; the required environment secrets `PW_STAGING_AUTH_EMAIL` and `PW_STAGING_AUTH_EMAIL_PLUS_CONFIRMED` are not verified/present.
+- Local hygiene note (not a deploy blocker): worktree `_worktrees/k8s-gitops-libreplay-staging` is on branch `libreplay-staging-contract`, 2 commits behind `origin/deploy/prod`; the Argo Application CRs themselves are correct.
 - 1Password metadata has adjacent candidates, but they are not enough to authorize reuse:
   - Google OAuth candidate `oautnh google auth skirmshop app` has `Client ID`, `Client secret`, and `oauth_keys_json`, but title indicates Skirmshop, not LibrePlay.
   - Facebook candidates are login items with username/password/notes, not confirmed app OAuth credentials.

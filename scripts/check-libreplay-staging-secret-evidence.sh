@@ -1,4 +1,14 @@
 #!/usr/bin/env bash
+# Requires Bash: this script uses `set -o pipefail` and Bash-only constructs
+# (`[[ ... ]]`, `${!var}`). Guard against POSIX `sh`/dash so an accidental
+# `sh scripts/check-libreplay-staging-secret-evidence.sh` exits with a clear
+# message instead of `set: Illegal option -o pipefail` noise. The guard itself
+# is POSIX-compatible so dash reaches it before the pipefail line.
+if [ -z "${BASH_VERSION:-}" ]; then
+  printf 'FAIL: this script requires bash. Run `bash %s [args]` or execute the script path directly; do not run it with `sh`.\n' "$0" >&2
+  exit 2
+fi
+
 set -euo pipefail
 
 mode="report"
