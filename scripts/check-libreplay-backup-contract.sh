@@ -5,6 +5,7 @@ root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 external_secret="$root/ops/libreplay-backup/externalsecret.yaml"
 policy="$root/ops/libreplay-backup/minio-backup-policy.json"
 sql="$root/ops/libreplay-backup/postgres-backup-role.sql"
+evidence_template="$root/ops/libreplay-backup/activation-evidence-template.md"
 kustomization="$root/k8s/kustomization.yaml"
 
 fail() {
@@ -41,7 +42,10 @@ reject_pattern() {
 require_file "$external_secret"
 require_file "$policy"
 require_file "$sql"
+require_file "$evidence_template"
 require_file "$kustomization"
+
+ok "activation evidence template is present for operator/PMO signoff"
 
 kubectl apply --dry-run=client -f "$external_secret" >/dev/null
 ok "backup ExternalSecret contract is valid Kubernetes YAML"

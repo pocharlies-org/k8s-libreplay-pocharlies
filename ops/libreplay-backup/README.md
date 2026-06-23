@@ -77,3 +77,40 @@ scripts/check-libreplay-backup-contract.sh
 
 - Non-destructive restore rehearsal passes in scratch targets before any backup
   path is called production-ready.
+
+## Activation Gate (Phase C)
+
+Two artifacts gate the manual bootstrap. Neither one mutates the cluster or
+Vault, and neither prints secret values.
+
+1. `scripts/check-libreplay-backup-activation.sh` — read-only live checker.
+   - Defaults to **report** mode (exits 0 while the bootstrap is still pending);
+     pass `--strict` to make any remaining blocker a non-zero exit.
+   - Runs `scripts/check-libreplay-backup-contract.sh` first (static contract).
+   - Reports the Argo app `libreplay` status if reachable (the backup contract
+     must stay outside the synced `k8s` path).
+   - Checks whether `ExternalSecret/libreplay-backup-secrets` and
+     `Secret/libreplay-backup-secrets` exist in namespace `libreplay`, and lists
+     only the REQUIRED key NAMES (`MINIO_BACKUP_ACCESS_KEY`,
+     `MINIO_BACKUP_SECRET_KEY`, `PG_BACKUP_USER`, `PG_BACKUP_PASSWORD`).
+   - Reports `BLOCKED` until the ExternalSecret is `Ready=True` and the Secret
+     carries all required keys.
+   - Confirms no backup CronJob exists yet (a credential-only gate), and reports
+     any present CronJob explicitly as a hard failure.
+
+   ```sh
+   scripts/check-libreplay-backup-activation.sh          # report mode
+   scripts/check-libreplay-backup-activation.sh --strict # gate before signoff
+   ```
+
+2. `activation-evidence-template.md` — operator evidence template. Copy it,
+   fill it during the bootstrap with **redacted** values only, and attach it to
+   PMO/Security signoff. It captures what a key-name check cannot see: the MinIO
+   scoped service-account policy, the PG `libreplay_backup` read-only grants, the
+   Vault path populated/read-proven, the absence of admin/root creds in the
+   cluster, no PROD-10A coupling, and PMO/Security signoff before any CronJob or
+   restore rehearsal is added.
+
+The checker reaching strict-green is necessary but **not sufficient**: backup
+CronJobs and any restore rehearsal stay blocked until the evidence template is
+complete and both Security and PMO sign off.
