@@ -1,2 +1,4 @@
 - op: remove
+  path: /spec/groups/2
+- op: remove
   path: /spec/groups/1

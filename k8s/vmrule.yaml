@@ -127,9 +127,100 @@ spec:
           expr: avg_over_time(probe_success{job="libreplay-lan-synthetic",app="libreplay",endpoint="health"}[1h]) < 0.99
           for: 5m
           labels:
-            severity: warning
+            severity: warn
             area: slo
             app: libreplay
           annotations:
             summary: "LibrePlay LAN synthetic availability budget is low"
-            description: "The 1-hour availability proxy for {{ $labels.instance }} is below 99%. This is a short-window SLO proxy, not the final multi-window error-budget policy."
+            description: "The 1-hour availability proxy for {{ $labels.instance }} is below 99%. This is a 1h supplement/proxy only; the canonical multi-window multi-burn-rate error-budget SLO policy lives in the libreplay.slo group. LAN-only SLI; routes today to the shared Synapse receiver (visibility), not a dedicated LibrePlay pager."
+    # Canonical SLO policy for the LibrePlay LAN synthetic availability SLI.
+    # Target: 99.0% availability over a rolling 14d window (LAN-only; NOT a public
+    # edge SLO). 14d is bounded by VMSingle retentionPeriod=15d and matches Loki
+    # retention (336h). The SLI is a single blackbox health probe against
+    # https://libreplay.lan.e-dani.com/api/health; do not over-claim public/edge
+    # coverage. Burn-rate windows are all <= 3d so they evaluate within retention;
+    # only error_budget_remaining_ratio (14d) depends on accrued history.
+    - name: libreplay.slo
+      interval: 30s
+      rules:
+        - record: libreplay:slo_synth_avail:ratio5m
+          expr: avg_over_time(probe_success{job="libreplay-lan-synthetic",app="libreplay",endpoint="health"}[5m])
+          labels:
+            app: libreplay
+            area: slo
+            slo: synthetic-availability
+        - record: libreplay:slo_synth_avail:ratio30m
+          expr: avg_over_time(probe_success{job="libreplay-lan-synthetic",app="libreplay",endpoint="health"}[30m])
+          labels:
+            app: libreplay
+            area: slo
+            slo: synthetic-availability
+        - record: libreplay:slo_synth_avail:ratio1h
+          expr: avg_over_time(probe_success{job="libreplay-lan-synthetic",app="libreplay",endpoint="health"}[1h])
+          labels:
+            app: libreplay
+            area: slo
+            slo: synthetic-availability
+        - record: libreplay:slo_synth_avail:ratio6h
+          expr: avg_over_time(probe_success{job="libreplay-lan-synthetic",app="libreplay",endpoint="health"}[6h])
+          labels:
+            app: libreplay
+            area: slo
+            slo: synthetic-availability
+        - record: libreplay:slo_synth_avail:ratio3d
+          expr: avg_over_time(probe_success{job="libreplay-lan-synthetic",app="libreplay",endpoint="health"}[3d])
+          labels:
+            app: libreplay
+            area: slo
+            slo: synthetic-availability
+        - record: libreplay:slo_synth_avail:error_budget_remaining_ratio
+          expr: clamp_min(1 - ((1 - avg_over_time(probe_success{job="libreplay-lan-synthetic",app="libreplay",endpoint="health"}[14d])) / (1 - 0.99)), 0)
+          labels:
+            app: libreplay
+            area: slo
+            slo: synthetic-availability
+        - alert: LibrePlaySLOErrorBudgetBurnFast
+          expr: |
+            libreplay:slo_synth_avail:ratio1h < 0.856
+            and
+            libreplay:slo_synth_avail:ratio5m < 0.856
+          for: 2m
+          labels:
+            severity: critical
+            area: slo
+            app: libreplay
+            slo: synthetic-availability
+            burnrate: fast
+          annotations:
+            summary: "LibrePlay SLO fast error-budget burn (LAN synthetic availability)"
+            description: "Fast burn (1h and 5m availability both < 0.856, ~14.4x the 99% budget) for the LAN synthetic SLI. SLI is LAN-only (https://libreplay.lan.e-dani.com/api/health), not a public/edge signal. This alert routes today to the shared Synapse Alertmanager receiver for visibility; a dedicated LibrePlay pager is NOT active yet (cross-tenant follow-up)."
+        - alert: LibrePlaySLOErrorBudgetBurnMedium
+          expr: |
+            libreplay:slo_synth_avail:ratio6h < 0.94
+            and
+            libreplay:slo_synth_avail:ratio30m < 0.94
+          for: 5m
+          labels:
+            severity: critical
+            area: slo
+            app: libreplay
+            slo: synthetic-availability
+            burnrate: medium
+          annotations:
+            summary: "LibrePlay SLO medium error-budget burn (LAN synthetic availability)"
+            description: "Medium burn (6h and 30m availability both < 0.94, ~6x the 99% budget) for the LAN synthetic SLI. SLI is LAN-only (https://libreplay.lan.e-dani.com/api/health), not a public/edge signal. This alert routes today to the shared Synapse Alertmanager receiver for visibility; a dedicated LibrePlay pager is NOT active yet (cross-tenant follow-up)."
+        - alert: LibrePlaySLOErrorBudgetBurnSlow
+          expr: |
+            libreplay:slo_synth_avail:ratio3d < 0.99
+            and
+            libreplay:slo_synth_avail:ratio6h < 0.99
+          for: 15m
+          labels:
+            severity: warn
+            area: slo
+            app: libreplay
+            slo: synthetic-availability
+            burnrate: slow
+          annotations:
+            summary: "LibrePlay SLO slow error-budget burn (LAN synthetic availability)"
+            description: "Slow/ticket-level burn (3d and 6h availability both < 0.99) for the LAN synthetic SLI; canonical successor to the 1h proxy. SLI is LAN-only (https://libreplay.lan.e-dani.com/api/health), not a public/edge signal. This alert routes today to the shared Synapse Alertmanager receiver for visibility; a dedicated LibrePlay pager is NOT active yet (cross-tenant follow-up)."
