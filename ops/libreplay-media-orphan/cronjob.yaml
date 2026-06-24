@@ -1,0 +1,106 @@
+---
+# Contract-only / DORMANT artifact for PROD-MEDIA-PURGE-ORPHAN-02.
+#
+# This CronJob is a fail-closed TEMPLATE. It is doubly inert:
+#   1. `suspend: true` -- even if applied by hand it never schedules a Job.
+#   2. It is NOT referenced by k8s/kustomization.yaml (or any staging/production
+#      kustomization), so Argo CD never syncs it.
+#
+# It must NOT be activated (un-suspended / added to the Argo-synced path) until:
+#   * Vault `secret/libreplay/media-orphan` is populated with the scoped,
+#     read-only MinIO service-account keys and the read-only Postgres DSN,
+#   * ExternalSecret/libreplay-media-orphan-secrets is Ready and the Secret
+#     carries all required key names,
+#   * the activation evidence template is filled with redacted proof, and
+#   * Security AND PMO sign off.
+#
+# Design guarantees enforced by scripts/check-libreplay-media-orphan-contract.sh:
+#   * Authenticates ONLY with the scoped Secret/libreplay-media-orphan-secrets
+#     -- never the application MinIO root keys in Secret/libreplay-secrets.
+#   * Runs the read-only `media:orphan-inventory` CLI, which is dry-run by design
+#     (no `--execute`, no S3 delete/purge primitive, sanitized counts only).
+#   * Pins the worker image by immutable digest.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: libreplay-media-orphan-inventory
+  namespace: libreplay
+  labels:
+    app.kubernetes.io/name: libreplay
+    app: libreplay-media-orphan-inventory
+    libreplay.e-dani.com/purpose: media-orphan-inventory
+  annotations:
+    libreplay.e-dani.com/activation: "manual-after-security-approval"
+    libreplay.e-dani.com/mode: "read-only-inventory-no-physical-purge"
+spec:
+  # Dormant: never schedules until Security/PMO un-suspend during activation.
+  suspend: true
+  # Weekly read-only evidence cadence (effective only after activation).
+  schedule: "17 4 * * 1"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 1800
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app: libreplay-media-orphan-inventory
+        spec:
+          restartPolicy: Never
+          enableServiceLinks: false
+          imagePullSecrets:
+            - name: harbor-pull
+          nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: media-orphan-inventory
+              # Pinned worker digest carrying the read-only orphan inventory CLI
+              # (source scaffold 7da4345, runtime worker-sha-48a9dd094926). The
+              # operator must re-pin this to the activation-time worker digest.
+              image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-48a9dd094926@sha256:721def1105cef0345fe37663ee4c2c0d74b9fa6a1c8ceeaaaaf4a95f236a6d3f
+              # Canonical, source-controlled read-only invocation. The CLI has no
+              # `--execute` path and never issues an S3 delete. Activation
+              # evidence must confirm the in-image entrypoint produces sanitized
+              # counts only (no raw object keys).
+              command:
+                - pnpm
+                - --filter
+                - "@libreplay/jobs"
+                - media:orphan-inventory
+              envFrom:
+                # Non-secret config only (MINIO_ENDPOINT/MINIO_BUCKET/MINIO_REGION
+                # etc.). Carries NO credentials.
+                - configMapRef: { name: libreplay-config }
+              env:
+                # Scoped, read-only Postgres DSN (role libreplay_media_orphan) --
+                # NOT the application owner/superuser DSN.
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef: { name: libreplay-media-orphan-secrets, key: PG_ORPHAN_DSN }
+                # Scoped, read-only MinIO service account (ListBucket only) --
+                # NOT the application MinIO root keys in libreplay-secrets.
+                - name: MINIO_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef: { name: libreplay-media-orphan-secrets, key: MINIO_ORPHAN_ACCESS_KEY }
+                - name: MINIO_SECRET_KEY
+                  valueFrom:
+                    secretKeyRef: { name: libreplay-media-orphan-secrets, key: MINIO_ORPHAN_SECRET_KEY }
+                # Bounded read-only scan tuning (matches the PMO-validated run).
+                - { name: MEDIA_ORPHAN_INVENTORY_MAX_PAGES, value: "20" }
+                - { name: MEDIA_ORPHAN_INVENTORY_PAGE_SIZE, value: "1000" }
+                - { name: MEDIA_ORPHAN_INVENTORY_MIN_OBJECT_AGE_HOURS, value: "24" }
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: false
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests: { cpu: 100m, memory: 256Mi }
+                limits: { memory: 512Mi }
