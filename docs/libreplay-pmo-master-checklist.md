@@ -11,6 +11,18 @@ Update 2026-06-23: `PROD-OBS-DEPS-FLAP-04` mitigated the dependency readiness fl
 
 Update 2026-06-24: `PROD-OBS-ALERT-SLO-05` closes the safe GitOps slice for multi-window LAN synthetic SLO policy, read-only Alertmanager route rehearsal and Loki log aggregation policy. External error tracking, a dedicated LibrePlay receiver/pager or owner-approved real-fire rehearsal, and residual dependency latency/root-cause cleanup remain open.
 
+Update 2026-06-24: current runtime `48a9dd094926` also includes `7da4345 Add safe media orphan inventory scaffold`. PMO validated the read-only orphan inventory live: `1094` objects scanned, `36` sanitized orphan candidates under coarse bucket `variants`, `106` protected-prefix hits and no raw object keys emitted. Physical purge execution remains blocked pending legal/backup/MinIO-versioning approval and Security/PMO signoff.
+
+## 2026-06-24 PMO Iteration - Media Orphan Inventory Runtime Evidence
+
+- [x] Orphan inventory source exists in current runtime lineage. Evidence: source commit `7da4345 Add safe media orphan inventory scaffold` is an ancestor of current `main` and deployed runtime `48a9dd094926`.
+- [x] Live worker can execute a bounded read-only inventory without raw object-key output. Evidence: PMO called `buildMediaOrphanInventory({ maxPages: 20, pageSize: 1000, minObjectAgeHours: 24 })` directly in the `libreplay-worker` pod, avoiding AuditLog writes; output was sanitized counts only: `scanned.objects=1094`, `scanned.pages=2`, `scanned.truncated=false`, `referenced.assetKeys=206`, `referenced.variantKeys=852`, `orphans.total=36`, `orphans.byTopPrefix.variants=36`, `orphans.protectedPrefixHits=106`.
+- [x] Local focused tests cover orphan inventory and fail-closed physical purge. Evidence: `pnpm --filter @libreplay/jobs test -- src/handlers/media-orphan-inventory.test.ts src/handlers/media-physical-purge-contract.test.ts` returned `22/22`; `pnpm --filter @libreplay/jobs test -- src/handlers/media-retention.test.ts` returned `7/7`.
+- [x] Jobs package does not reference S3 delete primitives. Evidence: `rg -n "deleteObject|DeleteObjectCommand|DeleteObjectsCommand" packages/jobs/src packages/jobs/package.json` returned no matches.
+- [blocked] Physical deletion of current orphan candidates remains blocked. Evidence: `packages/jobs/src/handlers/media-physical-purge-contract.ts` throws `approval_gate_unset` unconditionally; legal/backup/MinIO-versioning approval and Security/PMO signoff are still required before any delete worker exists.
+- [blocked] Automated orphan inventory CronJob remains open. Evidence: current validation is manual PMO read-only runtime smoke; no GitOps CronJob exists for recurring inventory evidence.
+- [blocked] Process exception is recorded. Evidence: Claude CLI subagents were unavailable due session limit until `05:20 Europe/Madrid`; PMO recorded read-only evidence under `/home/dibanez/k8s/.rho/claude-subagents/libreplay/prod-media-purge-orphan-current/pmo-readonly-evidence.report.md`.
+
 ## 2026-06-24 PMO Iteration - Multi-window SLO, Route Rehearsal And Log Policy
 
 - [x] Research, architecture and security gates completed before implementation. Evidence: RHO reports under `/home/dibanez/k8s/.rho/claude-subagents/libreplay/prod-obs-alert-slo-05/`; Researcher identified the `severity=warning` blackhole and live Loki sink, Architect defined the 99.0%/14d LAN synthetic SLO contract, and Security approved with read-only routing and no-secret conditions.
@@ -153,12 +165,12 @@ Update 2026-06-24: `PROD-OBS-ALERT-SLO-05` closes the safe GitOps slice for mult
 
 ## 2026-06-21 PMO Iteration - Media Retention Lifecycle
 
-- [x] Source DB lifecycle state exists. Evidence: source commit `50e1d14` adds `MediaRetentionClass`, `MediaPurgeState`, `deletedAt`, `purgeAfter`, `purgeState`, `purgedAt`, legal-hold fields and migration `20260621003500_media_retention_lifecycle`.
+- [x] Source DB lifecycle state exists. Evidence: source commit `50e1d14` adds `MediaRetentionClass`, `MediaPurgeState`, `deletedAt`, `purgeAfter`, `purgeState`, `purgedAt`, legal-hold fields and migration `20260621003500_media_retention_lifecycle`; source commit `7da4345` adds read-only S3-to-DB orphan inventory and a fail-closed physical-purge contract.
 - [x] Retention planner is default-safe. Evidence: `packages/jobs/src/handlers/media-retention.ts` defaults to dry-run, CLI requires `--execute` or `MEDIA_RETENTION_EXECUTE=1`, summaries omit object keys, and physical S3 delete is not invoked.
 - [x] Planner protects live/legal references. Evidence: relation blockers cover posts, albums, messages, profile/event/date/blog covers, content participants, PPV, paid content, verification evidence, consent documents, open reports and moderation cases; intrinsic blockers cover demo media, `verification/` object keys, legal holds and `csam_match`.
 - [x] Source CI and release passed. Evidence: local `pnpm typecheck`, focused job/media/web tests, source CI `27888886986`, and Release Image `27889021579` completed `success` for `50e1d14`.
 - [x] Runtime migration/rollout validated. Evidence: GitOps commit `02c806c`, GitOps CI `27889214576`, Argo `Synced|Healthy|02c806c4df54bb3a1e493cd9dbf6fd8ad3bea694|k8s`, migration Job `libreplay-db-migrate-50e1d14` completed, web/worker images are on `50e1d14` digests, `/api/health/deps` is healthy, retention dry-run returned `dryRun=true` with `20` stale pending candidates and no object keys, DB status summary remains `PENDING_UPLOAD|ACTIVE|46` and `APPROVED|ACTIVE|193`, focused media/payment E2E returned `5 passed (7.9s)`, and 10-minute web/worker log greps returned no matches.
-- [blocked] Full production media lifecycle remains incomplete. Evidence: physical S3 purge/orphan cleanup is intentionally blocked pending legal/MinIO-versioning decision; CDN/signed delivery, backup/restore, real CSAM/media moderation and worker scaling remain open.
+- [blocked] Full production media lifecycle remains incomplete. Evidence: read-only orphan inventory is now runtime-validated, but physical S3 purge execution is intentionally blocked pending legal/backup/MinIO-versioning approval and Security/PMO signoff; CDN/signed delivery, backup/restore, real CSAM/media moderation and worker scaling remain open.
 
 ## 2026-06-21 PMO Iteration - Media Storage Lifecycle Gate
 
@@ -166,7 +178,7 @@ Update 2026-06-24: `PROD-OBS-ALERT-SLO-05` closes the safe GitOps slice for mult
 - [x] Conservative lifecycle is deployed without deleting current active media by age. Evidence: live MinIO lifecycle rule `d8rj0au5vkbs7hha9tkg` has delete-marker expiration enabled, noncurrent expiration after `30` days and `KEEP VERSIONS=2`; `scripts/check-libreplay-media-storage-policy.sh --static` rejects `--expire-days` for this gate.
 - [x] Staging runtime will inherit the policy when it is later enabled. Evidence: `scripts/check-libreplay-media-storage-policy.sh --static` renders `staging/overlays/runtime` and confirms `Job/libreplay-minio-policy-20260621` in `libreplay-staging` targeting `libreplay-media-staging`.
 - [x] Runtime media flows still pass after lifecycle. Evidence: focused LAN media/payment E2E returned `5 passed (7.1s)`, `/api/health/deps` returned `ok:true`, and 5-minute web/worker error scans returned no matches.
-- [blocked] Full production media lifecycle remains incomplete. Evidence: CDN/signed delivery, DB-backed retention fields, purge/orphan cleanup worker, production media host, backup/restore rehearsal, real CSAM/media moderation providers and worker scaling remain open.
+- [blocked] Full production media lifecycle remains incomplete. Evidence: CDN/signed delivery, approved physical purge execution, production media host, backup/restore rehearsal, real CSAM/media moderation providers and worker scaling remain open; DB-backed retention fields and read-only orphan inventory are present.
 
 ## 2026-06-21 PMO Iteration - Staging Secrets Evidence Bootstrap
 
