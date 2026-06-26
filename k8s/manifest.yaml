@@ -416,7 +416,7 @@ spec:
             matchLabels: { app: libreplay-web }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-12267d9b6999@sha256:bee99b76e11ad85838584c956bc641755e5043f2f742a7d2930a33c62f096747
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-81ca0c690025@sha256:3cdcec7698c4bd91761f261f95f89b1df927b99a454a5f286a7fc83d2d313c90
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -743,6 +743,36 @@ spec:
       containers:
         - name: migrate
           image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-f6ad7631d275@sha256:6d2346eb59f39f3d193b36ee59e86d65e852962ca641dcd1c4a4fb1bd887db72
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: libreplay-db-migrate-81ca0c6
+  namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    libreplay.e-dani.com/lan-demo: "migrate profile longDescription + media caption/galleryOrder"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels: { app: libreplay-db-migrate }
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: harbor-pull
+      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      containers:
+        - name: migrate
+          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-81ca0c690025@sha256:e05e3ca1d54388febd8d9571b0b203bce486e1f120bd26dd6f48adbef38c04c1
           env:
             - name: DATABASE_URL
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
