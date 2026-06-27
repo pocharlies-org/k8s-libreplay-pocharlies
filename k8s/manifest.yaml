@@ -46,8 +46,8 @@ metadata:
 data:
   NODE_ENV: production
   DEPLOYMENT_MODE: lan-demo
-  APP_BASE_URL: https://libreplay.lan.e-dani.com
-  AUTH_URL: https://libreplay.lan.e-dani.com
+  APP_BASE_URL: https://libreplay.e-dani.com
+  AUTH_URL: https://libreplay.e-dani.com
   AUTH_TRUST_HOST: "true"
   DEFAULT_LOCALE: es
   SUPPORTED_LOCALES: es,en,fr,de,pt
@@ -67,7 +67,7 @@ data:
   ENABLE_LAN_DEMO_LOGIN: "true"
   LAN_DEMO_ALLOWED_HOSTS: libreplay.lan.e-dani.com
   LAN_DEMO_ALLOWED_CIDRS: 127.0.0.1/32,::1/128,10.0.0.0/8,100.64.0.0/10,172.16.0.0/12,192.168.0.0/16
-  USE_MOCK_OAUTH: "true"
+  USE_MOCK_OAUTH: "false"
   PAYMENT_PROVIDER: mock
   ENABLE_MOCK_PAYMENTS: "true"
   ENABLE_MOCK_AGE_VERIFICATION: "true"
@@ -416,7 +416,7 @@ spec:
             matchLabels: { app: libreplay-web }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-1cf4057fb263@sha256:641ac59a2a6ee02f2c3ecd7978b2b3788acaf66021074669ef6806ff1c718773
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-cdb9edad47bc@sha256:87b8d9c0b5aff10b6193b1265a1d6fa2d0e21456100f86328e845beb7c57d963
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
