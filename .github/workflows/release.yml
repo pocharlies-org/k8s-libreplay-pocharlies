@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   ci:
-    uses: pocharlies/k8s-gitops-pocharlies/.github/workflows/reusable-ci.yml@main
+    uses: pocharlies-org/k8s-gitops-pocharlies/.github/workflows/reusable-ci.yml@main
     with:
       runner: arc-libreplay
       run_node: false
@@ -29,7 +29,7 @@ jobs:
 
   release:
     needs: [ci]
-    uses: pocharlies/k8s-gitops-pocharlies/.github/workflows/reusable-manifest-release.yml@main
+    uses: pocharlies-org/k8s-gitops-pocharlies/.github/workflows/reusable-manifest-release.yml@main
     with:
       runner: arc-libreplay
       source_path: k8s
