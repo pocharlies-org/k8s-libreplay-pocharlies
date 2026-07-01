@@ -5,13 +5,13 @@ metadata:
   name: libreplay
 ---
 # LibreReplay — match replay + media platform
-# Stack: libreplay-web (local image), postgres, redis, meilisearch, minio, mailpit
+# Stack: libreplay-web (local image), postgres, shared Valkey, meilisearch, minio, mailpit
 #
 # Migration strategy (Phase 9):
 #   1. pg_dump libreplay-postgres → restore CloudNativePG
 #   2. meilisearch: dump API + restore
 #   3. minio: mc mirror libreplay-minio → libreplay-minio (k8s)
-#   4. redis: BGSAVE + copy dump.rdb → mount in new pod
+#   4. redis: migrated to shared-valkey in namespace databases
 
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
@@ -29,8 +29,10 @@ spec:
     - extract: { key: secret/libreplay }
 
 # Required keys in Vault `secret/libreplay` before any scale-up:
-# DATABASE_URL, REDIS_URL, AUTH_SECRET, MINIO_ACCESS_KEY, MINIO_SECRET_KEY,
+# DATABASE_URL, AUTH_SECRET, MINIO_ACCESS_KEY, MINIO_SECRET_KEY,
 # MEILISEARCH_API_KEY, DB_USER, DB_PASSWORD, SEED_USER_PASSWORD.
+# REDIS_URL is built from Secret/libreplay-shared-valkey so Redis can move
+# independently from the application Vault bundle.
 # Optional provider keys stay empty/absent in staging until real providers are enabled:
 # GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FACEBOOK_CLIENT_ID,
 # FACEBOOK_CLIENT_SECRET, OAUTH_TOKEN_ENC_KEY.
@@ -119,39 +121,6 @@ metadata: { name: libreplay-postgres, namespace: libreplay }
 spec:
   selector: { app: libreplay-postgres }
   ports: [{ name: postgres, port: 5432, targetPort: 5432 }]
-
-# ── Redis ──────────────────────────────────────────────────────────────────────
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: libreplay-redis
-  namespace: libreplay
-spec:
-  replicas: 0
-  strategy: { type: Recreate }
-  selector: { matchLabels: { app: libreplay-redis } }
-  template:
-    metadata: { labels: { app: libreplay-redis } }
-    spec:
-      enableServiceLinks: false
-      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
-      containers:
-        - name: redis
-          image: redis:7-alpine
-          command: [redis-server, --appendonly, "yes"]
-          resources:
-            requests: { cpu: 20m, memory: 32Mi }
-            limits:   { memory: 256Mi }
-          readinessProbe:
-            exec: { command: [redis-cli, ping] }
----
-apiVersion: v1
-kind: Service
-metadata: { name: libreplay-redis, namespace: libreplay }
-spec:
-  selector: { app: libreplay-redis }
-  ports: [{ name: redis, port: 6379, targetPort: 6379 }]
 
 # ── Meilisearch ────────────────────────────────────────────────────────────────
 ---
@@ -293,8 +262,10 @@ spec:
           env:
             - name: DATABASE_URL
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
+            - name: SHARED_VALKEY_LIBREPLAY_PASSWORD
+              valueFrom: { secretKeyRef: { name: libreplay-shared-valkey, key: password } }
             - name: REDIS_URL
-              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: REDIS_URL } }
+              value: "redis://libreplay:$(SHARED_VALKEY_LIBREPLAY_PASSWORD)@shared-valkey-master.databases.svc.cluster.local:6379/0"
             - name: AUTH_SECRET
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: AUTH_SECRET } }
             - name: MINIO_ACCESS_KEY
