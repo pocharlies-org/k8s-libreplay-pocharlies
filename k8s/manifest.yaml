@@ -62,14 +62,14 @@ data:
   TRUSTED_CLIENT_IP_HEADER: x-forwarded-for
   LOG_LEVEL: info
   ERROR_TRACKING_PROVIDER: none
-  LIBREPLAY_VERSION: 01deea107370
+  LIBREPLAY_VERSION: 38784db0e15e
   AUTH_EMAIL_PROVIDER: console
   MAIL_FROM: LibrePlay <noreply@libreplay.local>
   SMTP_SECURE: "false"
   ENABLE_LAN_DEMO_LOGIN: "true"
   LAN_DEMO_ALLOWED_HOSTS: libreplay.lan.e-dani.com
   LAN_DEMO_ALLOWED_CIDRS: 127.0.0.1/32,::1/128,10.0.0.0/8,100.64.0.0/10,172.16.0.0/12,192.168.0.0/16
-  USE_MOCK_OAUTH: "false"
+  USE_MOCK_OAUTH: "true"
   PAYMENT_PROVIDER: mock
   ENABLE_MOCK_PAYMENTS: "true"
   ENABLE_MOCK_AGE_VERIFICATION: "true"
@@ -385,7 +385,7 @@ spec:
             matchLabels: { app: libreplay-web }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-01deea107370@sha256:85a9925fbbd942268809d05361e101c3612794d96658a3d058b7fecf5e400ba9
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-38784db0e15e@sha256:cf90212a44474ec54f1558b5346aaca3048cbe3ca84863a49e7956dfaab7f858
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -472,7 +472,7 @@ spec:
             matchLabels: { app: libreplay-worker }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-01deea107370@sha256:59c82ba067d103fc2123f8d9956ffbd0537c7250974e39cc44bedd1b2d947474
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-38784db0e15e@sha256:0c478612e4701691df1a18381e041d485b52bc5d01f5cecf2e31c30e1071418a
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
