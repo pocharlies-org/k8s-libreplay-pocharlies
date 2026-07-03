@@ -1,7 +1,7 @@
 # LibrePlay PMO Master Checklist
 
-Status: `LAN-DEMO-VALIDATED`
-Last updated: 2026-06-24 CEST
+Status: `LAN-DEMO-GITOPS-READY / 2026-07-03-AUTOPILOT-P0-ROLLING`
+Last updated: 2026-07-03 CEST
 Target: `https://libreplay.lan.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
@@ -12,6 +12,24 @@ Update 2026-06-23: `PROD-OBS-DEPS-FLAP-04` mitigated the dependency readiness fl
 Update 2026-06-24: `PROD-OBS-ALERT-SLO-05` closes the safe GitOps slice for multi-window LAN synthetic SLO policy, read-only Alertmanager route rehearsal and Loki log aggregation policy. External error tracking, a dedicated LibrePlay receiver/pager or owner-approved real-fire rehearsal, and residual dependency latency/root-cause cleanup remain open.
 
 Update 2026-06-24: `PROD-MEDIA-PURGE-ORPHAN-02` docs/cleanup: a GitOps contract for dormant media orphan inventory is now complete. Contract files (`ops/libreplay-media-orphan/*`), checkers (`scripts/check-libreplay-media-orphan-*.sh`), and activation template are ready. Contract is outside k8s/kustomization.yaml, CronJob remains suspend: true. Manual bootstrap of Vault secret/libreplay/media-orphan (scoped MinIO/PG credentials, no ClusterSecretStore automation), ExternalSecret Ready status, operator activation evidence, and Security AND PMO written signoff are all required before activation. Physical purge execution remains blocked pending separate legal/backup/MinIO-versioning approval.
+
+Update 2026-07-03: PMO autopilot revalidated LAN runtime before release work. Baseline GitOps revision was `Synced/Healthy`, pods/endpoints were ready, and `/api/health` plus `/api/health/deps` returned `200` on the previous digest-pinned image. Source hardening for monetization/ledger/payment-events/subscriptions/refunds is now committed and released as `01deea107370`; GitOps has a dry-run-clean digest-pinned rollout candidate with explicit migration and seed jobs. It is not yet closed as LAN accepted until Argo sync/health, post-rollout smoke and Playwright all pass. Production monetization remains `NO-GO`; LAN demo mocks remain allowed only as `lan-demo/no-prod`.
+
+## 2026-07-03 PMO Autopilot - LAN Operability And Monetization Hardening
+
+- [x] LAN baseline checked before changes. Evidence: Argo `libreplay` is `Synced/Healthy`; namespace `libreplay` has Postgres, MinIO, Meili, web and worker pods ready; `/api/health` and `/api/health/deps` return HTTP `200`.
+- [x] Local source gate for new monetization foundation is green. Evidence: `pnpm -r typecheck`, `pnpm -r test`, `pnpm -r lint`, `pnpm --filter @libreplay/web build`, Prisma validate and `git diff --check` passed in `/home/dibanez/k8s/libreplay`; lint has existing non-blocking Next/React warnings only.
+- [x] Docker release targets no longer miss the new workspace package. Evidence: Dockerfile copies `packages/monetization/package.json`; `docker build --target runner`, `--target tools`, `--target seed` and `--target worker` pass with frozen workspace install/build.
+- [x] Playwright LAN findings from the first browser pass were fixed in source. Evidence: Spanish forgot-password copy now says `¿Has olvidado tu contraseña?`; dark muted foreground contrast was raised to avoid the serious axe contrast violation seen on `/es/discover` mobile.
+- [x] Payment-event recovery is audit-backed. Evidence: admin requeue route tests assert `AuditLog(action=PAYMENT_EVENT_REQUEUED)` and worker replay tests pass.
+- [x] Subscription provider lifecycle is monotonic. Evidence: Stripe provider event timestamps are stored and older events are ignored; regression test covers a stale active delivery after a newer cancellation.
+- [x] Refund execution is two-admin and UI-backed for LAN/P0. Evidence: source `01deea1 feat(monetization): add admin refund request UI` adds `/admin` refund request create/approve controls, i18n parity, idempotency/open-request tests and roadmap evidence.
+- [x] Source release is published to Harbor with immutable tags. Evidence: GitHub Release Image run `28631260391` completed success after a transient Harbor LAN DNS rerun; source SHA `01deea107370`; web digest `sha256:85a9925fbbd942268809d05361e101c3612794d96658a3d058b7fecf5e400ba9`; tools digest `sha256:9b18ed132b2db84009b780bbcf793e7c3e30577d65d3960cddbc027d1590752a`; seed digest `sha256:40fbba21e65caa953e22aa5247d596fc0d8d50329ec19bf76cae060292f36ff3`; worker digest `sha256:59c82ba067d103fc2123f8d9956ffbd0537c7250974e39cc44bedd1b2d947474`.
+- [x] GitOps rollout candidate is dry-run clean. Evidence: `kubectl apply --dry-run=server -f k8s/manifest.yaml`, `kubectl apply --dry-run=server -k k8s`, `kubectl kustomize k8s`, `git diff --check` and `rg ':latest|libreplay-web:latest' k8s/manifest.yaml` passed; new jobs `libreplay-db-migrate-01deea1` and `libreplay-db-seed-01deea1` are created server-side in dry-run.
+- [blocked] This source revision is not yet deployed to LAN. Required sequence: commit/push GitOps, Argo sync/health, migration/seed job completion, rollout health, post-rollout smoke and Playwright.
+- [blocked] Full LAN acceptance is not closed yet. Evidence needed: deployed digest matches source SHA, migrations succeeded, `/api/health` and `/api/health/deps` pass on new runtime, full LAN Playwright passes with trace/screenshot/video, and post-test logs show no critical errors.
+- [blocked] Production monetization remains blocked. Required before public/prod: written adult PSP approval, legal/tax/Perlas terms, real age/KYC/KYB/face/CSAM/media moderation providers, payout provider execution, refund/dispute partial policy, reserve release policy, audit retention/export and compliance signoff.
+- [blocked] Partial refunds and partial disputes remain fail-closed by amount mismatch in P0; full-transaction reversal is supported and tested.
 
 ## 2026-06-24 PMO Iteration - Media Orphan Inventory Runtime Evidence
 

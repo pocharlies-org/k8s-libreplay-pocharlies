@@ -48,8 +48,8 @@ metadata:
 data:
   NODE_ENV: production
   DEPLOYMENT_MODE: lan-demo
-  APP_BASE_URL: https://libreplay.e-dani.com
-  AUTH_URL: https://libreplay.e-dani.com
+  APP_BASE_URL: https://libreplay.lan.e-dani.com
+  AUTH_URL: https://libreplay.lan.e-dani.com
   AUTH_TRUST_HOST: "true"
   DEFAULT_LOCALE: es
   SUPPORTED_LOCALES: es,en,fr,de,pt
@@ -62,7 +62,7 @@ data:
   TRUSTED_CLIENT_IP_HEADER: x-forwarded-for
   LOG_LEVEL: info
   ERROR_TRACKING_PROVIDER: none
-  LIBREPLAY_VERSION: 48a9dd094926
+  LIBREPLAY_VERSION: 01deea107370
   AUTH_EMAIL_PROVIDER: console
   MAIL_FROM: LibrePlay <noreply@libreplay.local>
   SMTP_SECURE: "false"
@@ -371,7 +371,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: deps-flap-cache-20260623
+        libreplay.e-dani.com/config-rollout: monetization-01deea1-20260703
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -385,7 +385,7 @@ spec:
             matchLabels: { app: libreplay-web }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-1800cc87630a@sha256:575111d2bab4f76fc8fc2ef448ec7f8c7c27c4f1346797d60877d80bbca59e18
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-01deea107370@sha256:85a9925fbbd942268809d05361e101c3612794d96658a3d058b7fecf5e400ba9
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -458,7 +458,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: deps-flap-cache-20260623
+        libreplay.e-dani.com/config-rollout: monetization-01deea1-20260703
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -472,7 +472,7 @@ spec:
             matchLabels: { app: libreplay-worker }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-48a9dd094926@sha256:721def1105cef0345fe37663ee4c2c0d74b9fa6a1c8ceeaaaaf4a95f236a6d3f
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-01deea107370@sha256:59c82ba067d103fc2123f8d9956ffbd0537c7250974e39cc44bedd1b2d947474
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
@@ -753,6 +753,82 @@ spec:
           resources:
             requests: { cpu: 50m, memory: 128Mi }
             limits: { memory: 512Mi }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: libreplay-db-migrate-01deea1
+  namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    libreplay.e-dani.com/lan-demo: "migrate monetization ledger subscriptions refunds payment events"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels: { app: libreplay-db-migrate }
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: harbor-pull
+      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      containers:
+        - name: migrate
+          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-01deea107370@sha256:9b18ed132b2db84009b780bbcf793e7c3e30577d65d3960cddbc027d1590752a
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: libreplay-db-seed-01deea1
+  namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    libreplay.e-dani.com/lan-demo: "seed LAN demo monetization refund UI data"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 1800
+  template:
+    metadata:
+      labels: { app: libreplay-db-seed }
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: harbor-pull
+      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      containers:
+        - name: seed
+          image: harbor.e-dani.com/homelab/libreplay-web:seed-sha-01deea107370@sha256:40fbba21e65caa953e22aa5247d596fc0d8d50329ec19bf76cae060292f36ff3
+          envFrom:
+            - configMapRef: { name: libreplay-config }
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
+            - name: REDIS_URL
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: REDIS_URL } }
+            - name: AUTH_SECRET
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: AUTH_SECRET } }
+            - name: MINIO_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_ACCESS_KEY } }
+            - name: MINIO_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_SECRET_KEY } }
+            - name: MEILISEARCH_API_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MEILISEARCH_API_KEY } }
+            - name: SEED_USER_PASSWORD
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SEED_USER_PASSWORD } }
+            - name: DEMO_VISUALS_IMAGE_BASE_URL
+              value: "http://10.43.80.147:9002"
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
 ---
 apiVersion: batch/v1
 kind: Job
