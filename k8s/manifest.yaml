@@ -385,7 +385,7 @@ spec:
             matchLabels: { app: libreplay-web }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-4e38d8e9b6dc@sha256:63e10191aeed814b8c9bc1b5ee6a760a2ec64ec2f774712269bbecf4dd9f226e
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-5904bd1da935@sha256:58094f0e5b0e6b52e46f7ba745b5ac76a71dafc7a0a20764b1882ec59c2d9653
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
