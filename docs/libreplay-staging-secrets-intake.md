@@ -3,21 +3,21 @@
 Owner: PMO / DevOps / Security
 Date: 2026-06-21
 
-Scope: unblock `ExternalSecret/libreplay-secrets` in namespace `libreplay-staging` by creating the Vault KV v2 record that External Secrets reads as `secret/libreplay/staging`.
+Scope: unblock `ExternalSecret/libreplay-secrets` in namespace `libreplay-staging` by creating the Vault KV v2 record that External Secrets reads as `secret/libreplay/staging`. Until approved provider evidence exists, the app-secret `ExternalSecret` remains dormant in Git and is not part of the active Argo staging path.
 
 ## RHO Checklist
 
 ### Directives
 
 - [x] Do not print or commit secret values. Evidence: this document contains only key names, source expectations, and validation rules.
-- [x] Do not manually create `Secret/libreplay-secrets` in Kubernetes. Evidence: source of truth remains Vault through `ExternalSecret/libreplay-secrets`.
+- [x] Do not manually create `Secret/libreplay-secrets` in Kubernetes. Evidence: source of truth remains Vault through the dormant `ExternalSecret/libreplay-secrets` contract.
 - [x] Do not repoint Argo to `staging/overlays/runtime` until strict preflight passes. Evidence: `scripts/check-libreplay-staging-preflight.sh --strict` is blocked while the Vault record is absent.
 - [x] Do not reuse adjacent Skirmshop/other OAuth credentials unless their provider console explicitly includes LibrePlay staging redirect URIs.
 - [x] Require non-secret provider evidence before any Vault write. Evidence: `scripts/check-libreplay-staging-secret-evidence.sh --strict --vault-write` validates callback URI metadata and SMTP sender metadata without printing secrets.
 
 ### Acceptance Criteria
 
-- [ ] Vault KV v2 record exists at `secret/libreplay/staging`. Evidence required: ESO status `Ready=True` for `ExternalSecret/libreplay-secrets`.
+- [ ] Vault KV v2 record exists at `secret/libreplay/staging`. Evidence required: ESO status `Ready=True` for `ExternalSecret/libreplay-secrets` after the dormant contract is activated.
 - [ ] The materialized Kubernetes Secret contains the 19 required keys below. Evidence required: key-name-only check, never values.
 - [ ] Google OAuth app is LibrePlay-specific or explicitly configured for `https://libreplay-staging.e-dani.com/api/auth/oauth/google/callback`. Evidence required: provider console/config screenshot or metadata, no secret value.
 - [ ] Facebook OAuth app is LibrePlay-specific or explicitly configured for `https://libreplay-staging.e-dani.com/api/auth/oauth/facebook/callback`. Evidence required: provider console/config screenshot or metadata, no secret value.
@@ -66,10 +66,11 @@ revision for both apps: `ce67574` on `deploy/prod` (source `main` HEAD `48a9dd0`
 
 State confirmed on 2026-06-24:
 
-- `scripts/check-libreplay-staging-preflight.sh --strict` reports exactly **two blockers**: `ExternalSecret/libreplay-secrets` is `Ready=False|SecretSyncedError` ("could not get secret data from provider"), and `Secret/libreplay-secrets` is **not materialized** (absent).
+- 2026-07-06 update: the active `staging` path keeps `ExternalSecret/libreplay-secrets` dormant in `staging/libreplay-staging-secrets.externalsecret.yaml`, outside `staging/kustomization.yaml`, so Argo can stay healthy without inventing provider secrets. Runtime remains blocked until real provider evidence and Vault data exist.
+- `scripts/check-libreplay-staging-preflight.sh --strict` reports blockers for the dormant/missing app secret and absent materialized `Secret/libreplay-secrets`; this is still the runtime activation gate.
 - `scripts/check-libreplay-staging-secret-evidence.sh --strict` (run with bash) reports **seven blockers**: provider callbacks, Google redirect URI, Facebook redirect URI, SMTP sender confirmation, SMTP sender identity (mail-from), controlled mailbox, and plus-addressing confirmation. No values were printed.
-- Argo `libreplay` is `Synced|Healthy` (path `k8s`); `libreplay-staging` is `Synced|Degraded` (path `staging`) — both at rev `ce67574`, target `deploy/prod`. Degraded is **expected**: contract-only, **0 pods**, no runtime workloads.
-- `ExternalSecret/harbor-pull` in `libreplay-staging` is `Ready=True` (SecretSynced) and `secret/harbor-pull` (dockerconfigjson) is present, so the Vault store and ESO controller are working; the failure is specifically the missing Vault record `secret/libreplay/staging`.
+- Argo `libreplay` is `Synced|Healthy` (path `k8s`); `libreplay-staging` should remain `Synced|Healthy` (path `staging`) with **0 pods** and no runtime workloads while the app secret is dormant.
+- `ExternalSecret/harbor-pull` in `libreplay-staging` is `Ready=True` (SecretSynced) and `secret/harbor-pull` (dockerconfigjson) is present, so the Vault store and ESO controller are working; the missing data is specifically the unactivated Vault record `secret/libreplay/staging`.
 - `svc/libreplay-staging-dns-preflight` is an ExternalName placeholder; runtime overlay check passes dry-run and stays fail-closed (mocks disabled, staging Vault path, public HTTPS host, Cloudflare edge allowlist).
 - ESO logs confirm the exact provider error: `secret/libreplay/staging` does not exist.
 - A Vault metadata read from `vault-0` without an authorized token returned `403 permission denied`; do not bypass Vault access policy.

@@ -3,6 +3,7 @@ set -eu
 
 mode="live"
 manifest="staging/libreplay-staging-contract.yaml"
+secret_manifest="${SECRET_MANIFEST:-staging/libreplay-staging-secrets.externalsecret.yaml}"
 namespace="${1:-${NAMESPACE:-libreplay-staging}}"
 
 if [ "${1:-}" = "--static" ]; then
@@ -106,13 +107,18 @@ check_urls_and_mail() {
 
 if [ "$mode" = "static" ]; then
   kubectl apply --dry-run=client -f "$manifest" >/dev/null
+  kubectl apply --dry-run=client -f "$secret_manifest" >/dev/null
+
+  if grep -Eq '^[[:space:]]*name:[[:space:]]*libreplay-secrets[[:space:]]*$' "$manifest"; then
+    fail "active staging contract must keep libreplay-secrets dormant until provider evidence exists"
+  fi
 
   for key in $required_secret_keys; do
-    if ! grep -Eq "^[[:space:]]*-[[:space:]]*secretKey:[[:space:]]*${key}[[:space:]]*$" "$manifest"; then
+    if ! grep -Eq "^[[:space:]]*-[[:space:]]*secretKey:[[:space:]]*${key}[[:space:]]*$" "$secret_manifest"; then
       fail "static contract missing ExternalSecret key ${key}"
     fi
   done
-  info "static contract declares required ExternalSecret key names; values were not printed"
+  info "dormant app-secret contract declares required ExternalSecret key names; values were not printed"
 
   if ! grep -Eq '^[[:space:]]*name:[[:space:]]*harbor-pull[[:space:]]*$' "$manifest"; then
     fail "static contract missing ExternalSecret harbor-pull"
