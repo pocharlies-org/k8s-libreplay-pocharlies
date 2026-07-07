@@ -34,6 +34,14 @@ data:
   ENABLE_MOCK_CSAM_SCANNER: "false"
   ENABLE_MOCK_MEDIA_MODERATION: "false"
   ENABLE_MOCK_LLM: "false"
+  LIVE_STREAM_PROVIDER: livekit
+  LIVEKIT_URL: wss://livekit-staging.e-dani.com
+  LIVEKIT_EGRESS_ENABLED: "true"
+  LIVE_STREAM_DELIVERY_MODE: signed-cdn
+  LIVE_STREAM_CDN_BASE_URL: https://live-media-staging.e-dani.com
+  LIVE_STREAM_SIGNED_URL_TTL_SECONDS: "300"
+  AUCTION_SETTLEMENT_INTERVAL_MS: "60000"
+  AUCTION_SETTLEMENT_BATCH_SIZE: "50"
   MEDIA_DELIVERY_MODE: proxy
   MINIO_ENDPOINT: http://libreplay-minio.libreplay-staging.svc.cluster.local:9000
   MINIO_BUCKET: libreplay-media-staging

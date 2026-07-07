@@ -62,7 +62,7 @@ data:
   TRUSTED_CLIENT_IP_HEADER: x-forwarded-for
   LOG_LEVEL: info
   ERROR_TRACKING_PROVIDER: none
-  LIBREPLAY_VERSION: 4e38d8e9b6dc
+  LIBREPLAY_VERSION: 3699650e1e7a
   AUTH_EMAIL_PROVIDER: console
   MAIL_FROM: LibrePlay <noreply@libreplay.local>
   SMTP_SECURE: "false"
@@ -77,6 +77,11 @@ data:
   ENABLE_MOCK_CSAM_SCANNER: "true"
   ENABLE_MOCK_MEDIA_MODERATION: "true"
   ENABLE_MOCK_LLM: "true"
+  LIVE_STREAM_PROVIDER: mock
+  LIVEKIT_EGRESS_ENABLED: "false"
+  LIVE_STREAM_DELIVERY_MODE: provider
+  AUCTION_SETTLEMENT_INTERVAL_MS: "60000"
+  AUCTION_SETTLEMENT_BATCH_SIZE: "50"
   MINIO_ENDPOINT: http://libreplay-minio.libreplay.svc.cluster.local:9000
   MINIO_BUCKET: libreplay-media
   MINIO_REGION: us-east-1
@@ -371,7 +376,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: lan-acceptance-4e38d8e-20260703
+        libreplay.e-dani.com/config-rollout: creator-studio-3699650e-20260707
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -385,7 +390,7 @@ spec:
             matchLabels: { app: libreplay-web }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-5904bd1da935@sha256:58094f0e5b0e6b52e46f7ba745b5ac76a71dafc7a0a20764b1882ec59c2d9653
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-3699650e1e7a@sha256:abfc7dedb6d48787e07783019421d3bd9c72f74885ed3fe975d1e50a60176a5f
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -424,6 +429,12 @@ spec:
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SMTP_PASSWORD, optional: true } }
             - name: METRICS_BEARER_TOKEN
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: METRICS_BEARER_TOKEN, optional: true } }
+            - name: LIVEKIT_API_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: LIVEKIT_API_KEY, optional: true } }
+            - name: LIVEKIT_API_SECRET
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: LIVEKIT_API_SECRET, optional: true } }
+            - name: LIVE_STREAM_SIGNING_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: LIVE_STREAM_SIGNING_KEY, optional: true } }
           resources:
             requests: { cpu: 100m, memory: 256Mi }
             limits: { memory: 1Gi }
@@ -458,7 +469,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: lan-acceptance-4e38d8e-20260703
+        libreplay.e-dani.com/config-rollout: creator-studio-3699650e-20260707
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -472,7 +483,7 @@ spec:
             matchLabels: { app: libreplay-worker }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-4e38d8e9b6dc@sha256:fdae4b7cd763f43642c45c0bd86d25c8b1f48288790f996d570acf6508a7c456
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-3699650e1e7a@sha256:6d64d369d74fde5b9ebd20267fe39840cf7f6d4c5161040b201f88f271f78df7
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
@@ -498,6 +509,12 @@ spec:
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SMTP_USER, optional: true } }
             - name: SMTP_PASSWORD
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SMTP_PASSWORD, optional: true } }
+            - name: LIVEKIT_API_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: LIVEKIT_API_KEY, optional: true } }
+            - name: LIVEKIT_API_SECRET
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: LIVEKIT_API_SECRET, optional: true } }
+            - name: LIVE_STREAM_SIGNING_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: LIVE_STREAM_SIGNING_KEY, optional: true } }
           resources:
             requests: { cpu: 100m, memory: 256Mi }
             limits: { memory: 1Gi }
@@ -777,6 +794,36 @@ spec:
       containers:
         - name: migrate
           image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-01deea107370@sha256:9b18ed132b2db84009b780bbcf793e7c3e30577d65d3960cddbc027d1590752a
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: libreplay-db-migrate-3699650
+  namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    libreplay.e-dani.com/lan-demo: "migrate creator studio live auctions"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels: { app: libreplay-db-migrate }
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: harbor-pull
+      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      containers:
+        - name: migrate
+          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-3699650e1e7a@sha256:f58b0a1456b9e600a384e69b84e0006b0f4ab6aa5c3f4b524b55c305d1fbc994
           env:
             - name: DATABASE_URL
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }

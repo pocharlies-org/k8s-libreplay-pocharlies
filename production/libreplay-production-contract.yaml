@@ -62,6 +62,12 @@ spec:
       remoteRef: { key: secret/libreplay/production, property: SMTP_PASSWORD }
     - secretKey: METRICS_BEARER_TOKEN
       remoteRef: { key: secret/libreplay/production, property: METRICS_BEARER_TOKEN }
+    - secretKey: LIVEKIT_API_KEY
+      remoteRef: { key: secret/libreplay/production, property: LIVEKIT_API_KEY }
+    - secretKey: LIVEKIT_API_SECRET
+      remoteRef: { key: secret/libreplay/production, property: LIVEKIT_API_SECRET }
+    - secretKey: LIVE_STREAM_SIGNING_KEY
+      remoteRef: { key: secret/libreplay/production, property: LIVE_STREAM_SIGNING_KEY }
 ---
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
@@ -153,6 +159,14 @@ data:
   ENABLE_MOCK_CSAM_SCANNER: "false"
   ENABLE_MOCK_MEDIA_MODERATION: "false"
   ENABLE_MOCK_LLM: "false"
+  LIVE_STREAM_PROVIDER: livekit
+  LIVEKIT_URL: wss://livekit.e-dani.com
+  LIVEKIT_EGRESS_ENABLED: "true"
+  LIVE_STREAM_DELIVERY_MODE: signed-cdn
+  LIVE_STREAM_CDN_BASE_URL: https://live-media.libreplay.e-dani.com
+  LIVE_STREAM_SIGNED_URL_TTL_SECONDS: "300"
+  AUCTION_SETTLEMENT_INTERVAL_MS: "60000"
+  AUCTION_SETTLEMENT_BATCH_SIZE: "50"
   MINIO_ENDPOINT: http://libreplay-minio.libreplay-production.svc.cluster.local:9000
   MINIO_BUCKET: libreplay-media-production
   MINIO_REGION: us-east-1
