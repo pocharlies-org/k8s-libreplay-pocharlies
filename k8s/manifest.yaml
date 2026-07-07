@@ -376,7 +376,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: creator-studio-3699650e-20260707
+        libreplay.e-dani.com/config-rollout: creator-studio-3699650e-20260707b
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -469,7 +469,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: creator-studio-3699650e-20260707
+        libreplay.e-dani.com/config-rollout: creator-studio-3699650e-20260707b
     spec:
       enableServiceLinks: false
       imagePullSecrets:
