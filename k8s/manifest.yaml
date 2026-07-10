@@ -12,6 +12,12 @@ metadata:
 #   2. meilisearch: dump API + restore
 #   3. minio: mc mirror libreplay-minio → libreplay-minio (k8s)
 #   4. redis: migrated to shared-valkey in namespace databases
+#
+# Scheduling: every active long-running workload is constrained to the OVH
+# `ks5-nvme` pool. Historical, already-completed Jobs retain their original
+# `topology=lan` pod templates because Job templates are immutable; changing
+# them would make Argo replace/rerun migrations and seeds. Any new Job version
+# must use `node-pool: ks5-nvme`.
 
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
@@ -114,9 +120,8 @@ spec:
     spec:
       enableServiceLinks: false
       nodeSelector:
-        topology: lan
         kubernetes.io/arch: amd64
-        kubernetes.io/hostname: ubuntu
+        node-pool: ks5-nvme
       containers:
         - name: postgres
           image: postgres:16-alpine
@@ -173,7 +178,7 @@ spec:
     metadata: { labels: { app: libreplay-meilisearch } }
     spec:
       enableServiceLinks: false
-      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      nodeSelector: { kubernetes.io/arch: amd64, node-pool: ks5-nvme }
       containers:
         - name: meilisearch
           image: getmeili/meilisearch:v1.10
@@ -225,7 +230,7 @@ spec:
     metadata: { labels: { app: libreplay-minio } }
     spec:
       enableServiceLinks: false
-      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      nodeSelector: { kubernetes.io/arch: amd64, node-pool: ks5-nvme }
       containers:
         - name: minio
           image: minio/minio:RELEASE.2024-09-13T20-26-02Z
@@ -381,7 +386,7 @@ spec:
       enableServiceLinks: false
       imagePullSecrets:
         - name: harbor-pull
-      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      nodeSelector: { kubernetes.io/arch: amd64, node-pool: ks5-nvme }
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
@@ -474,7 +479,7 @@ spec:
       enableServiceLinks: false
       imagePullSecrets:
         - name: harbor-pull
-      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      nodeSelector: { kubernetes.io/arch: amd64, node-pool: ks5-nvme }
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
