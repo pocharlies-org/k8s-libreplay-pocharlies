@@ -146,11 +146,9 @@ check_static() {
   if ! grep -Eq 'type:[[:space:]]*kubernetes\.io/dockerconfigjson' "$manifest"; then
     fail "production contract missing dockerconfigjson template for harbor-pull"
   fi
-  for key in username password registry; do
-    if ! grep -Eq "remoteRef:[[:space:]]*\\{ key: infra/harbor/ci-robot, property: ${key} \\}" "$manifest"; then
-      fail "production contract missing harbor-pull remoteRef ${key}"
-    fi
-  done
+  if ! grep -Eq 'remoteRef:[[:space:]]*\{ key: infra/harbor/k8s-runtime-pull, property: dockerconfigjson \}' "$manifest"; then
+    fail "production contract missing pull-only harbor-pull remoteRef"
+  fi
   info "production contract declares harbor-pull ExternalSecret without printing registry credentials"
 
   for pattern in \
