@@ -111,6 +111,8 @@ kind: StatefulSet
 metadata:
   name: libreplay-postgres
   namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   serviceName: libreplay-postgres
   replicas: 1
@@ -170,6 +172,8 @@ kind: Deployment
 metadata:
   name: libreplay-meilisearch
   namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   replicas: 1
   strategy: { type: Recreate }
@@ -222,6 +226,8 @@ kind: Deployment
 metadata:
   name: libreplay-minio
   namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   replicas: 1
   strategy: { type: Recreate }
@@ -371,6 +377,8 @@ metadata:
   name: libreplay-web
   namespace: libreplay
   annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  annotations:
     argocd.argoproj.io/sync-options: Replace=true
     argocd.argoproj.io/sync-wave: "4"
 spec:
@@ -463,6 +471,8 @@ kind: Deployment
 metadata:
   name: libreplay-worker
   namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
   annotations:
     argocd.argoproj.io/sync-options: Replace=true
     argocd.argoproj.io/sync-wave: "4"
