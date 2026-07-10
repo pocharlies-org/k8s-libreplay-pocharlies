@@ -62,7 +62,7 @@ data:
   TRUSTED_CLIENT_IP_HEADER: x-forwarded-for
   LOG_LEVEL: info
   ERROR_TRACKING_PROVIDER: none
-  LIBREPLAY_VERSION: 6f36ff3
+  LIBREPLAY_VERSION: 85b599a
   AUTH_EMAIL_PROVIDER: console
   MAIL_FROM: LibrePlay <noreply@libreplay.local>
   SMTP_SECURE: "false"
@@ -376,7 +376,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: creator-studio-6f36ff3-20260708
+        libreplay.e-dani.com/config-rollout: creator-commerce-85b599a-20260710
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -390,7 +390,7 @@ spec:
             matchLabels: { app: libreplay-web }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:sha-6f36ff3361d6@sha256:edb45d1b14379b3df8019c308b9df9c3a3c4ef3f34889e36e5e9dd3aec2538d3
+          image: harbor.e-dani.com/homelab/libreplay-web:sha-85b599a3cc52@sha256:4d702a9c01fd8e85529b57a0122573a704b6cc3807935ccb3a1dadce4587098b
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -469,7 +469,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: creator-studio-6f36ff3-20260708
+        libreplay.e-dani.com/config-rollout: creator-commerce-85b599a-20260710
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -483,7 +483,7 @@ spec:
             matchLabels: { app: libreplay-worker }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-6f36ff3361d6@sha256:0ff6335806f0df5bf022ba7eaa0ff8cb5e31f0d39ced6b338c845565182d94d8
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-sha-85b599a3cc52@sha256:3dc0ccc759f358fc0e4435c352384aced1a5b9a295d40cbac7b807b29a5a14ed
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
@@ -1024,6 +1024,82 @@ spec:
       containers:
         - name: seed
           image: harbor.e-dani.com/homelab/libreplay-web:seed-sha-6f36ff3361d6@sha256:c8f3490c2197cd1c0da1195a129efd4368ab83479086b9b2e82b259db03a4d77
+          envFrom:
+            - configMapRef: { name: libreplay-config }
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
+            - name: REDIS_URL
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: REDIS_URL } }
+            - name: AUTH_SECRET
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: AUTH_SECRET } }
+            - name: MINIO_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_ACCESS_KEY } }
+            - name: MINIO_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MINIO_SECRET_KEY } }
+            - name: MEILISEARCH_API_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: MEILISEARCH_API_KEY } }
+            - name: SEED_USER_PASSWORD
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SEED_USER_PASSWORD } }
+            - name: DEMO_VISUALS_IMAGE_BASE_URL
+              value: "http://dgx-dashboard-backend.control-nexus.svc.cluster.local:9002"
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: libreplay-db-migrate-85b599a
+  namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    libreplay.e-dani.com/lan-demo: "verify creator commerce schema from merge 85b599a"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels: { app: libreplay-db-migrate }
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: harbor-pull
+      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      containers:
+        - name: migrate
+          image: harbor.e-dani.com/homelab/libreplay-web:tools-sha-85b599a3cc52@sha256:456e038cf0503e71af1be494bc4d1a05d16f1d12c9d2fe5c59b728e7629cb81b
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: libreplay-secrets, key: DATABASE_URL } }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: libreplay-db-seed-85b599a
+  namespace: libreplay
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    libreplay.e-dani.com/lan-demo: "idempotent creator commerce seed from merge 85b599a"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 1800
+  template:
+    metadata:
+      labels: { app: libreplay-db-seed }
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: harbor-pull
+      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      containers:
+        - name: seed
+          image: harbor.e-dani.com/homelab/libreplay-web:seed-sha-85b599a3cc52@sha256:dcab2bfd7b4754985e82eec5d8b8adc2f9ad0d1bfe8c4c0f43d7403db91721b4
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
