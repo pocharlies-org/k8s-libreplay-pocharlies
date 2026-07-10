@@ -1004,7 +1004,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: libreplay-db-seed-6f36ff3
+  name: libreplay-db-seed-6f36ff3-dns
   namespace: libreplay
   annotations:
     argocd.argoproj.io/sync-wave: "3"
@@ -1042,7 +1042,7 @@ spec:
             - name: SEED_USER_PASSWORD
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SEED_USER_PASSWORD } }
             - name: DEMO_VISUALS_IMAGE_BASE_URL
-              value: "http://10.43.80.147:9002"
+              value: "http://dgx-dashboard-backend.control-nexus.svc.cluster.local:9002"
           resources:
             requests: { cpu: 100m, memory: 256Mi }
             limits: { memory: 1Gi }
