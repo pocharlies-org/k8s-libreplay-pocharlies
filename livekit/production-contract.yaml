@@ -42,6 +42,29 @@ spec:
     - secretKey: LIVEKIT_S3_SECRET_KEY
       remoteRef: { key: secret/libreplay/livekit-production, property: LIVEKIT_S3_SECRET_KEY }
 ---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: libreplay-livekit-turn-tls
+  namespace: libreplay-livekit
+  labels:
+    app.kubernetes.io/name: libreplay-livekit-server
+    libreplay.e-dani.com/environment: production
+spec:
+  refreshInterval: 1h
+  secretStoreRef: { name: vault-backend, kind: ClusterSecretStore }
+  target:
+    name: libreplay-livekit-turn-tls
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    template:
+      type: kubernetes.io/tls
+  data:
+    - secretKey: tls.crt
+      remoteRef: { key: secret/libreplay/livekit-production, property: LIVEKIT_TURN_TLS_CRT }
+    - secretKey: tls.key
+      remoteRef: { key: secret/libreplay/livekit-production, property: LIVEKIT_TURN_TLS_KEY }
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -59,6 +82,68 @@ spec:
   type: ExternalName
   externalName: livekit-production-dns-placeholder.e-dani.com
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: libreplay-livekit-ingest-dns-preflight
+  namespace: libreplay-livekit
+  labels:
+    app.kubernetes.io/name: libreplay-livekit-ingress
+    libreplay.e-dani.com/environment: production
+    libreplay.e-dani.com/purpose: dns-preflight
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: ingest.livekit.e-dani.com
+    external-dns.alpha.kubernetes.io/target: 57.129.17.172
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "false"
+spec:
+  type: ExternalName
+  externalName: livekit-ingest-production-dns-placeholder.e-dani.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: libreplay-livekit-turn-dns-preflight
+  namespace: libreplay-livekit
+  labels:
+    app.kubernetes.io/name: libreplay-livekit-server
+    libreplay.e-dani.com/environment: production
+    libreplay.e-dani.com/purpose: dns-preflight
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: turn.livekit.e-dani.com
+    external-dns.alpha.kubernetes.io/target: 57.129.17.172
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "false"
+spec:
+  type: ExternalName
+  externalName: livekit-turn-production-dns-placeholder.e-dani.com
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: libreplay-livekit-redis
+  namespace: libreplay-livekit
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: libreplay-livekit-server
+  namespace: libreplay-livekit
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: libreplay-livekit-egress
+  namespace: libreplay-livekit
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: libreplay-livekit-ingress
+  namespace: libreplay-livekit
+automountServiceAccountToken: false
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -73,6 +158,31 @@ spec:
     metadata:
       labels: { app: libreplay-livekit-redis }
     spec:
+      serviceAccountName: libreplay-livekit-redis
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels: { app: libreplay-livekit-redis }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app: libreplay-livekit-redis }
       containers:
         - name: redis
           image: redis:7.4-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
@@ -83,24 +193,39 @@ spec:
           env:
             - name: LIVEKIT_REDIS_PASSWORD
               valueFrom: { secretKeyRef: { name: libreplay-livekit-secrets, key: LIVEKIT_REDIS_PASSWORD, optional: false } }
+            - name: REDISCLI_AUTH
+              valueFrom: { secretKeyRef: { name: libreplay-livekit-secrets, key: LIVEKIT_REDIS_PASSWORD, optional: false } }
           ports:
-            - { name: redis, containerPort: 6379 }
+            - { name: redis, containerPort: 6379, protocol: TCP }
+          startupProbe:
+            exec: { command: ["/bin/sh", "-ec", "redis-cli ping | grep -qx PONG"] }
+            periodSeconds: 5
+            failureThreshold: 30
           readinessProbe:
-            tcpSocket: { port: redis }
-            initialDelaySeconds: 5
+            exec: { command: ["/bin/sh", "-ec", "redis-cli ping | grep -qx PONG"] }
             periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
           livenessProbe:
-            tcpSocket: { port: redis }
-            initialDelaySeconds: 20
+            exec: { command: ["/bin/sh", "-ec", "redis-cli ping | grep -qx PONG"] }
             periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
           resources:
-            requests: { cpu: 50m, memory: 128Mi }
-            limits: { memory: 512Mi }
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
           volumeMounts:
             - { name: redis-data, mountPath: /data }
+            - { name: tmp, mountPath: /tmp }
       volumes:
         - name: redis-data
           persistentVolumeClaim: { claimName: libreplay-livekit-redis-data }
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -122,7 +247,7 @@ metadata:
 spec:
   selector: { app: libreplay-livekit-redis }
   ports:
-    - { name: redis, port: 6379, targetPort: redis }
+    - { name: redis, port: 6379, targetPort: redis, protocol: TCP }
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -138,6 +263,29 @@ spec:
     metadata:
       labels: { app: libreplay-livekit-server }
     spec:
+      serviceAccountName: libreplay-livekit-server
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 18000
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10000
+        runAsGroup: 10000
+        fsGroup: 10000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels: { app: libreplay-livekit-server }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app: libreplay-livekit-server }
       containers:
         - name: livekit
           image: livekit/livekit-server:v1.9.1@sha256:c039a1bfa154c8479ac369c380665638e92a7e9531e69664549c0c0d3eb65e63
@@ -151,7 +299,8 @@ spec:
               rtc:
                 tcp_port: 7881
                 udp_port: 50000
-                use_external_ip: true
+                node_ip: 57.129.17.172
+                use_external_ip: false
               redis:
                 address: libreplay-livekit-redis.libreplay-livekit.svc.cluster.local:6379
                 password: ${LIVEKIT_REDIS_PASSWORD}
@@ -162,8 +311,20 @@ spec:
                 auto_create: false
                 empty_timeout: 600
                 departure_timeout: 120
+              ingress:
+                rtmp_base_url: rtmp://ingest.livekit.e-dani.com/live
+                whip_base_url: https://ingest.livekit.e-dani.com/w
+              turn:
+                enabled: true
+                domain: turn.livekit.e-dani.com
+                cert_file: /etc/livekit-turn-tls/tls.crt
+                key_file: /etc/livekit-turn-tls/tls.key
+                tls_port: 5349
+                udp_port: 3478
               logging:
                 level: info
+                json: true
+                sample: true
               EOF
               exec /livekit-server --config /tmp/livekit.yaml
           env:
@@ -174,23 +335,44 @@ spec:
             - name: LIVEKIT_REDIS_PASSWORD
               valueFrom: { secretKeyRef: { name: libreplay-livekit-secrets, key: LIVEKIT_REDIS_PASSWORD, optional: false } }
           ports:
-            - { name: http, containerPort: 7880 }
-            - { name: rtc-tcp, containerPort: 7881 }
+            - { name: http, containerPort: 7880, protocol: TCP }
+            - { name: rtc-tcp, containerPort: 7881, protocol: TCP }
             - { name: rtc-udp, containerPort: 50000, protocol: UDP }
-            - { name: metrics, containerPort: 6789 }
+            - { name: turn-tls, containerPort: 5349, protocol: TCP }
+            - { name: turn-udp, containerPort: 3478, protocol: UDP }
+            - { name: metrics, containerPort: 6789, protocol: TCP }
+          startupProbe:
+            httpGet: { path: /, port: http }
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
           readinessProbe:
             httpGet: { path: /, port: http }
-            initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 3
+            failureThreshold: 3
           livenessProbe:
             httpGet: { path: /, port: http }
-            initialDelaySeconds: 30
             periodSeconds: 20
             timeoutSeconds: 3
+            failureThreshold: 3
           resources:
-            requests: { cpu: 500m, memory: 1Gi }
-            limits: { memory: 2Gi }
+            requests: { cpu: "2", memory: 1Gi }
+            limits: { cpu: "4", memory: 2Gi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: turn-tls, mountPath: /etc/livekit-turn-tls, readOnly: true }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+        - name: turn-tls
+          secret:
+            secretName: libreplay-livekit-turn-tls
+            defaultMode: 0440
 ---
 apiVersion: v1
 kind: Service
@@ -201,10 +383,8 @@ metadata:
 spec:
   selector: { app: libreplay-livekit-server }
   ports:
-    - { name: http, port: 7880, targetPort: http }
-    - { name: rtc-tcp, port: 7881, targetPort: rtc-tcp }
-    - { name: rtc-udp, port: 50000, targetPort: rtc-udp, protocol: UDP }
-    - { name: metrics, port: 6789, targetPort: metrics }
+    - { name: http, port: 7880, targetPort: http, protocol: TCP }
+    - { name: metrics, port: 6789, targetPort: metrics, protocol: TCP }
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -220,11 +400,34 @@ spec:
     metadata:
       labels: { app: libreplay-livekit-egress }
     spec:
+      serviceAccountName: libreplay-livekit-egress
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 3600
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 0
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels: { app: libreplay-livekit-egress }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app: libreplay-livekit-egress }
       containers:
         - name: egress
           image: livekit/egress:v1.13.0@sha256:980ff439431df2c773573721ab6da19e15bdc1f049ab7cb80e87470bf174c12f
           imagePullPolicy: IfNotPresent
-          command: ["/bin/sh", "-ec"]
+          command: ["/bin/bash", "-ec"]
           args:
             - |
               cat >/tmp/egress.yaml <<EOF
@@ -236,7 +439,12 @@ spec:
                 password: ${LIVEKIT_REDIS_PASSWORD}
               health_port: 7980
               prometheus_port: 9090
-              file_outputs:
+              logging:
+                level: info
+                json: true
+              disallow_local_storage: true
+              enable_chrome_sandbox: false
+              storage:
                 s3:
                   endpoint: ${LIVEKIT_S3_ENDPOINT}
                   region: ${LIVEKIT_S3_REGION}
@@ -245,25 +453,58 @@ spec:
                   secret: ${LIVEKIT_S3_SECRET_KEY}
                   force_path_style: true
               EOF
-              exec /entrypoint.sh --config /tmp/egress.yaml
-          envFrom:
-            - secretRef: { name: libreplay-livekit-secrets }
+              exec /entrypoint.sh
+          env:
+            - { name: EGRESS_CONFIG_FILE, value: /tmp/egress.yaml }
+            - name: LIVEKIT_API_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-livekit-secrets, key: LIVEKIT_API_KEY, optional: false } }
+            - name: LIVEKIT_API_SECRET
+              valueFrom: { secretKeyRef: { name: libreplay-livekit-secrets, key: LIVEKIT_API_SECRET, optional: false } }
+            - name: LIVEKIT_REDIS_PASSWORD
+              valueFrom: { secretKeyRef: { name: libreplay-livekit-secrets, key: LIVEKIT_REDIS_PASSWORD, optional: false } }
+            - name: LIVEKIT_S3_ENDPOINT
+              valueFrom: { secretKeyRef: { name: libreplay-livekit-secrets, key: LIVEKIT_S3_ENDPOINT, optional: false } }
+            - name: LIVEKIT_S3_REGION
+              valueFrom: { secretKeyRef: { name: libreplay-livekit-secrets, key: LIVEKIT_S3_REGION, optional: false } }
+            - name: LIVEKIT_S3_BUCKET
+              valueFrom: { secretKeyRef: { name: libreplay-livekit-secrets, key: LIVEKIT_S3_BUCKET, optional: false } }
+            - name: LIVEKIT_S3_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-livekit-secrets, key: LIVEKIT_S3_ACCESS_KEY, optional: false } }
+            - name: LIVEKIT_S3_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-livekit-secrets, key: LIVEKIT_S3_SECRET_KEY, optional: false } }
           ports:
-            - { name: health, containerPort: 7980 }
-            - { name: metrics, containerPort: 9090 }
+            - { name: health, containerPort: 7980, protocol: TCP }
+            - { name: metrics, containerPort: 9090, protocol: TCP }
+          startupProbe:
+            httpGet: { path: /, port: health }
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 60
           readinessProbe:
             httpGet: { path: /, port: health }
-            initialDelaySeconds: 15
             periodSeconds: 10
             timeoutSeconds: 3
+            failureThreshold: 3
           livenessProbe:
             httpGet: { path: /, port: health }
-            initialDelaySeconds: 45
             periodSeconds: 20
             timeoutSeconds: 3
+            failureThreshold: 3
           resources:
             requests: { cpu: "4", memory: 4Gi }
-            limits: { memory: 6Gi }
+            limits: { cpu: "6", memory: 6Gi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: false
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: egress-tmp, mountPath: /home/egress/tmp }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 256Mi }
+        - name: egress-tmp
+          emptyDir: { sizeLimit: 10Gi }
 ---
 apiVersion: v1
 kind: Service
@@ -274,8 +515,130 @@ metadata:
 spec:
   selector: { app: libreplay-livekit-egress }
   ports:
-    - { name: health, port: 7980, targetPort: health }
-    - { name: metrics, port: 9090, targetPort: metrics }
+    - { name: health, port: 7980, targetPort: health, protocol: TCP }
+    - { name: metrics, port: 9090, targetPort: metrics, protocol: TCP }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: libreplay-livekit-ingress
+  namespace: libreplay-livekit
+  labels: { app: libreplay-livekit-ingress }
+spec:
+  replicas: 0
+  selector:
+    matchLabels: { app: libreplay-livekit-ingress }
+  template:
+    metadata:
+      labels: { app: libreplay-livekit-ingress }
+    spec:
+      serviceAccountName: libreplay-livekit-ingress
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 10800
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10000
+        runAsGroup: 10000
+        fsGroup: 10000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels: { app: libreplay-livekit-ingress }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app: libreplay-livekit-ingress }
+      containers:
+        - name: ingress
+          image: livekit/ingress:v1.4.3@sha256:04bdc68b56530870e65086a07daac7743f3f049f0be87e0df2b4b7e51f1b9379
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              cat >/tmp/ingress.yaml <<EOF
+              api_key: ${LIVEKIT_API_KEY}
+              api_secret: ${LIVEKIT_API_SECRET}
+              ws_url: ws://libreplay-livekit-server.libreplay-livekit.svc.cluster.local:7880
+              redis:
+                address: libreplay-livekit-redis.libreplay-livekit.svc.cluster.local:6379
+                password: ${LIVEKIT_REDIS_PASSWORD}
+              health_port: 7888
+              prometheus_port: 7889
+              http_relay_port: 9090
+              rtmp_port: 1935
+              whip_port: 8080
+              rtc_config:
+                node_ip: 57.129.17.172
+                use_external_ip: false
+                udp_port: 7885
+              logging:
+                level: info
+                json: true
+              EOF
+              exec ingress
+          env:
+            - { name: INGRESS_CONFIG_FILE, value: /tmp/ingress.yaml }
+            - { name: HOME, value: /tmp }
+            - { name: XDG_CACHE_HOME, value: /tmp/.cache }
+            - name: LIVEKIT_API_KEY
+              valueFrom: { secretKeyRef: { name: libreplay-livekit-secrets, key: LIVEKIT_API_KEY, optional: false } }
+            - name: LIVEKIT_API_SECRET
+              valueFrom: { secretKeyRef: { name: libreplay-livekit-secrets, key: LIVEKIT_API_SECRET, optional: false } }
+            - name: LIVEKIT_REDIS_PASSWORD
+              valueFrom: { secretKeyRef: { name: libreplay-livekit-secrets, key: LIVEKIT_REDIS_PASSWORD, optional: false } }
+          ports:
+            - { name: health, containerPort: 7888, protocol: TCP }
+            - { name: metrics, containerPort: 7889, protocol: TCP }
+            - { name: http-relay, containerPort: 9090, protocol: TCP }
+            - { name: rtmp, containerPort: 1935, protocol: TCP }
+            - { name: whip, containerPort: 8080, protocol: TCP }
+            - { name: whip-rtc, containerPort: 7885, protocol: UDP }
+          startupProbe:
+            httpGet: { path: /, port: health }
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /, port: health }
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /, port: health }
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests: { cpu: "2", memory: 1Gi }
+            limits: { cpu: "4", memory: 2Gi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 2Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: libreplay-livekit-ingress
+  namespace: libreplay-livekit
+  labels: { app: libreplay-livekit-ingress }
+spec:
+  selector: { app: libreplay-livekit-ingress }
+  ports:
+    - { name: health, port: 7888, targetPort: health, protocol: TCP }
+    - { name: metrics, port: 7889, targetPort: metrics, protocol: TCP }
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -283,7 +646,7 @@ metadata:
   name: libreplay-livekit-server
   namespace: libreplay-livekit
 spec:
-  maxUnavailable: 1
+  minAvailable: 1
   selector:
     matchLabels: { app: libreplay-livekit-server }
 ---
@@ -293,9 +656,19 @@ metadata:
   name: libreplay-livekit-egress
   namespace: libreplay-livekit
 spec:
-  maxUnavailable: 1
+  minAvailable: 1
   selector:
     matchLabels: { app: libreplay-livekit-egress }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: libreplay-livekit-ingress
+  namespace: libreplay-livekit
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: libreplay-livekit-ingress }
 ---
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMServiceScrape
@@ -319,6 +692,20 @@ metadata:
 spec:
   selector:
     matchLabels: { app: libreplay-livekit-egress }
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: libreplay-livekit-ingress
+  namespace: libreplay-livekit
+spec:
+  selector:
+    matchLabels: { app: libreplay-livekit-ingress }
   endpoints:
     - port: metrics
       path: /metrics
