@@ -1119,8 +1119,6 @@ spec:
               valueFrom: { secretKeyRef: { name: libreplay-secrets, key: SEED_USER_PASSWORD } }
             - name: DEMO_VISUALS_IMAGE_BASE_URL
               value: "http://dgx-dashboard-backend.control-nexus.svc.cluster.local:9002"
-            - name: DEMO_VISUALS_SKIP_UNREADABLE
-              value: "true"
           resources:
             requests: { cpu: 100m, memory: 256Mi }
             limits: { memory: 1Gi }
