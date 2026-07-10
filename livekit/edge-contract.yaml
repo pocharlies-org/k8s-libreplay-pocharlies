@@ -118,8 +118,8 @@ metadata:
   name: libreplay-livekit-rtc-tcp
   namespace: libreplay-livekit
   labels: { libreplay.e-dani.com/activation: blocked }
+  annotations: { kubernetes.io/ingress.class: traefik-edge }
 spec:
-  ingressClassName: traefik-edge
   entryPoints: [livekit-rtc-tcp]
   routes:
     - match: HostSNI(`*`)
@@ -132,8 +132,8 @@ metadata:
   name: libreplay-livekit-turn-tls
   namespace: libreplay-livekit
   labels: { libreplay.e-dani.com/activation: blocked }
+  annotations: { kubernetes.io/ingress.class: traefik-edge }
 spec:
-  ingressClassName: traefik-edge
   entryPoints: [livekit-turn-tls]
   routes:
     - match: HostSNI(`turn.livekit.e-dani.com`)
@@ -148,8 +148,8 @@ metadata:
   name: libreplay-livekit-rtmp
   namespace: libreplay-livekit
   labels: { libreplay.e-dani.com/activation: blocked }
+  annotations: { kubernetes.io/ingress.class: traefik-edge }
 spec:
-  ingressClassName: traefik-edge
   entryPoints: [livekit-rtmp]
   routes:
     - match: HostSNI(`*`)
@@ -162,8 +162,8 @@ metadata:
   name: libreplay-livekit-rtc-udp
   namespace: libreplay-livekit
   labels: { libreplay.e-dani.com/activation: blocked }
+  annotations: { kubernetes.io/ingress.class: traefik-edge }
 spec:
-  ingressClassName: traefik-edge
   entryPoints: [livekit-rtc-udp]
   routes:
     - services:
@@ -175,8 +175,8 @@ metadata:
   name: libreplay-livekit-turn-udp
   namespace: libreplay-livekit
   labels: { libreplay.e-dani.com/activation: blocked }
+  annotations: { kubernetes.io/ingress.class: traefik-edge }
 spec:
-  ingressClassName: traefik-edge
   entryPoints: [livekit-turn-udp]
   routes:
     - services:
@@ -188,8 +188,8 @@ metadata:
   name: libreplay-livekit-whip-rtc
   namespace: libreplay-livekit
   labels: { libreplay.e-dani.com/activation: blocked }
+  annotations: { kubernetes.io/ingress.class: traefik-edge }
 spec:
-  ingressClassName: traefik-edge
   entryPoints: [livekit-whip-rtc]
   routes:
     - services:
