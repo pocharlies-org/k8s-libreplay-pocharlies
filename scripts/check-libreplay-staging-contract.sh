@@ -4,6 +4,7 @@ set -eu
 mode="live"
 manifest="staging/libreplay-staging-contract.yaml"
 secret_manifest="${SECRET_MANIFEST:-staging/libreplay-staging-secrets.externalsecret.yaml}"
+runtime_overlay="${RUNTIME_OVERLAY:-staging/overlays/runtime}"
 namespace="${1:-${NAMESPACE:-libreplay-staging}}"
 
 if [ "${1:-}" = "--static" ]; then
@@ -31,6 +32,15 @@ GOOGLE_CLIENT_SECRET
 FACEBOOK_CLIENT_ID
 FACEBOOK_CLIENT_SECRET
 OAUTH_TOKEN_ENC_KEY
+YOTI_AGE_API_KEY
+YOTI_AGE_SDK_ID
+YOTI_AGE_CALLBACK_URL
+YOTI_AGE_CANCEL_URL
+YOTI_IDV_CLIENT_SDK_ID
+YOTI_IDV_PRIVATE_KEY
+HIVE_API_KEY
+HIVE_REJECT_CLASSES
+HIVE_REVIEW_CLASSES
 SMTP_HOST
 SMTP_PORT
 SMTP_USER
@@ -41,12 +51,28 @@ LIVEKIT_API_SECRET
 LIVE_STREAM_SIGNING_KEY
 "
 
+required_safety_secret_keys="
+YOTI_AGE_API_KEY
+YOTI_AGE_SDK_ID
+YOTI_AGE_CALLBACK_URL
+YOTI_AGE_CANCEL_URL
+YOTI_IDV_CLIENT_SDK_ID
+YOTI_IDV_PRIVATE_KEY
+HIVE_API_KEY
+HIVE_REJECT_CLASSES
+HIVE_REVIEW_CLASSES
+"
+
 required_config_values="
 NODE_ENV=production
 DEPLOYMENT_MODE=staging
 USE_MOCK_OAUTH=false
 PAYMENT_PROVIDER=disabled
 ENABLE_MOCK_PAYMENTS=false
+AGE_VERIFICATION_PROVIDER=yoti
+FACE_LIVENESS_PROVIDER=yoti
+CSAM_SCANNER_PROVIDER=thorn-safer
+MEDIA_MODERATION_PROVIDER=hive
 ENABLE_MOCK_AGE_VERIFICATION=false
 ENABLE_MOCK_FACE_LIVENESS=false
 ENABLE_MOCK_CSAM_SCANNER=false
@@ -59,7 +85,9 @@ TRUSTED_CLIENT_IP_HEADER=cf-connecting-ip
 "
 
 tmp_keys="$(mktemp)"
-trap 'rm -f "$tmp_keys"' EXIT
+tmp_runtime="$(mktemp)"
+tmp_web="$(mktemp)"
+trap 'rm -f "$tmp_keys" "$tmp_runtime" "$tmp_web"' EXIT
 
 fail() {
   printf 'FAIL: %s\n' "$*" >&2
@@ -79,6 +107,32 @@ yaml_value() {
       print
     }
   ' "$manifest" | tail -n 1
+}
+
+has_required_web_secret_ref() {
+  key="$1"
+  awk -v key="$key" -v secret_name="$secret_name" '
+    function finish_env() {
+      if (in_target && saw_ref && saw_key && saw_secret && saw_required) found = 1
+    }
+    $1 == "-" && $2 == "name:" {
+      finish_env()
+      in_target = ($3 == key)
+      saw_ref = 0
+      saw_key = 0
+      saw_secret = 0
+      saw_required = 0
+      next
+    }
+    in_target && $1 == "secretKeyRef:" { saw_ref = 1 }
+    in_target && $1 == "key:" && $2 == key { saw_key = 1 }
+    in_target && $1 == "name:" && $2 == secret_name { saw_secret = 1 }
+    in_target && $1 == "optional:" && $2 == "false" { saw_required = 1 }
+    END {
+      finish_env()
+      exit(found ? 0 : 1)
+    }
+  ' "$tmp_web"
 }
 
 check_urls_and_mail() {
@@ -111,6 +165,25 @@ check_urls_and_mail() {
 if [ "$mode" = "static" ]; then
   kubectl apply --dry-run=client -f "$manifest" >/dev/null
   kubectl apply --dry-run=client -f "$secret_manifest" >/dev/null
+  kubectl kustomize "$runtime_overlay" > "$tmp_runtime"
+
+  awk '
+    /^---$/ {
+      if (is_web) exit
+      document = ""
+      is_deployment = 0
+      is_web = 0
+      next
+    }
+    {
+      document = document $0 ORS
+      if ($0 == "kind: Deployment") is_deployment = 1
+      if (is_deployment && $0 == "  name: libreplay-web") is_web = 1
+    }
+    END { if (is_web) printf "%s", document }
+  ' "$tmp_runtime" > "$tmp_web"
+
+  [ -s "$tmp_web" ] || fail "rendered staging runtime is missing Deployment/libreplay-web"
 
   if grep -Eq '^[[:space:]]*name:[[:space:]]*libreplay-secrets[[:space:]]*$' "$manifest"; then
     fail "active staging contract must keep libreplay-secrets dormant until provider evidence exists"
@@ -120,8 +193,17 @@ if [ "$mode" = "static" ]; then
     if ! grep -Eq "^[[:space:]]*-[[:space:]]*secretKey:[[:space:]]*${key}[[:space:]]*$" "$secret_manifest"; then
       fail "static contract missing ExternalSecret key ${key}"
     fi
+    if ! grep -Eq "remoteRef:[[:space:]]*\\{ key: secret/libreplay/staging, property: ${key} \\}" "$secret_manifest"; then
+      fail "static contract ${key} must read from secret/libreplay/staging"
+    fi
   done
-  info "dormant app-secret contract declares required ExternalSecret key names; values were not printed"
+
+  for key in $required_safety_secret_keys; do
+    if ! has_required_web_secret_ref "$key"; then
+      fail "rendered staging web deployment ${key} must use required ${secret_name}/${key} secretKeyRef"
+    fi
+  done
+  info "dormant app-secret contract and rendered web deployment declare required secret key names; values were not printed"
 
   if ! grep -Eq '^[[:space:]]*name:[[:space:]]*harbor-pull[[:space:]]*$' "$manifest"; then
     fail "static contract missing ExternalSecret harbor-pull"

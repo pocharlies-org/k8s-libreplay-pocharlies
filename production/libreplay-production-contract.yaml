@@ -52,6 +52,24 @@ spec:
       remoteRef: { key: secret/libreplay/production, property: FACEBOOK_CLIENT_SECRET }
     - secretKey: OAUTH_TOKEN_ENC_KEY
       remoteRef: { key: secret/libreplay/production, property: OAUTH_TOKEN_ENC_KEY }
+    - secretKey: YOTI_AGE_API_KEY
+      remoteRef: { key: secret/libreplay/production, property: YOTI_AGE_API_KEY }
+    - secretKey: YOTI_AGE_SDK_ID
+      remoteRef: { key: secret/libreplay/production, property: YOTI_AGE_SDK_ID }
+    - secretKey: YOTI_AGE_CALLBACK_URL
+      remoteRef: { key: secret/libreplay/production, property: YOTI_AGE_CALLBACK_URL }
+    - secretKey: YOTI_AGE_CANCEL_URL
+      remoteRef: { key: secret/libreplay/production, property: YOTI_AGE_CANCEL_URL }
+    - secretKey: YOTI_IDV_CLIENT_SDK_ID
+      remoteRef: { key: secret/libreplay/production, property: YOTI_IDV_CLIENT_SDK_ID }
+    - secretKey: YOTI_IDV_PRIVATE_KEY
+      remoteRef: { key: secret/libreplay/production, property: YOTI_IDV_PRIVATE_KEY }
+    - secretKey: HIVE_API_KEY
+      remoteRef: { key: secret/libreplay/production, property: HIVE_API_KEY }
+    - secretKey: HIVE_REJECT_CLASSES
+      remoteRef: { key: secret/libreplay/production, property: HIVE_REJECT_CLASSES }
+    - secretKey: HIVE_REVIEW_CLASSES
+      remoteRef: { key: secret/libreplay/production, property: HIVE_REVIEW_CLASSES }
     - secretKey: SMTP_HOST
       remoteRef: { key: secret/libreplay/production, property: SMTP_HOST }
     - secretKey: SMTP_PORT
@@ -139,6 +157,10 @@ data:
   USE_MOCK_OAUTH: "false"
   PAYMENT_PROVIDER: disabled
   ENABLE_MOCK_PAYMENTS: "false"
+  AGE_VERIFICATION_PROVIDER: yoti
+  FACE_LIVENESS_PROVIDER: yoti
+  CSAM_SCANNER_PROVIDER: thorn-safer
+  MEDIA_MODERATION_PROVIDER: hive
   ENABLE_MOCK_AGE_VERIFICATION: "false"
   ENABLE_MOCK_FACE_LIVENESS: "false"
   ENABLE_MOCK_CSAM_SCANNER: "false"
