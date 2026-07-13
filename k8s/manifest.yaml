@@ -62,7 +62,7 @@ data:
   TRUSTED_CLIENT_IP_HEADER: x-forwarded-for
   LOG_LEVEL: info
   ERROR_TRACKING_PROVIDER: none
-  LIBREPLAY_VERSION: b22be8a
+  LIBREPLAY_VERSION: 11d8245
   AUTH_EMAIL_PROVIDER: console
   MAIL_FROM: LibrePlay <noreply@libreplay.local>
   SMTP_SECURE: "false"
@@ -388,7 +388,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: profile-interview-b22be8a-20260713
+        libreplay.e-dani.com/config-rollout: profile-interview-11d8245-20260713
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -402,7 +402,7 @@ spec:
             matchLabels: { app: libreplay-web }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:profile-interview-b22be8ae26ef@sha256:7373fb63f12600d0b95c9419e8b3293ec9f2eb8d62ba56ba010667b534f94ecb
+          image: harbor.e-dani.com/homelab/libreplay-web:profile-interview-11d82450727c@sha256:2adf8574a7cf4f3e60317f34f07d0f912ae9333d6b0819c8c625d5eaa692e946
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -481,7 +481,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: profile-interview-b22be8a-20260713
+        libreplay.e-dani.com/config-rollout: profile-interview-11d8245-20260713
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -495,7 +495,7 @@ spec:
             matchLabels: { app: libreplay-worker }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-profile-interview-b22be8ae26ef@sha256:6548bfb5bd06a8ef97d2b02a56648ca046008beb15b32c38f3392bf9466153a8
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-profile-interview-11d82450727c@sha256:66602f038946eb9f5d485050f26673885543ba5e4ba2d077210ef1c5757c9900
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
