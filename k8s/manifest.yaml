@@ -388,7 +388,7 @@ spec:
     metadata:
       labels: { app: libreplay-web }
       annotations:
-        libreplay.e-dani.com/config-rollout: profile-interview-11d8245-20260713
+        libreplay.e-dani.com/config-rollout: profile-interview-auth-faf51c26-20260713
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -402,7 +402,7 @@ spec:
             matchLabels: { app: libreplay-web }
       containers:
         - name: libreplay-web
-          image: harbor.e-dani.com/homelab/libreplay-web:profile-interview-11d82450727c@sha256:2adf8574a7cf4f3e60317f34f07d0f912ae9333d6b0819c8c625d5eaa692e946
+          image: harbor.e-dani.com/homelab/libreplay-web:profile-interview-faf51c26@sha256:878cb28a15c56aa469f74def61b7fec7964f1b76635eeb13b0622a181657058b
           ports: [{ name: http, containerPort: 3000 }]
           envFrom:
             - configMapRef: { name: libreplay-config }
@@ -481,7 +481,7 @@ spec:
     metadata:
       labels: { app: libreplay-worker }
       annotations:
-        libreplay.e-dani.com/config-rollout: profile-interview-11d8245-20260713
+        libreplay.e-dani.com/config-rollout: profile-interview-auth-faf51c26-20260713
     spec:
       enableServiceLinks: false
       imagePullSecrets:
@@ -495,7 +495,7 @@ spec:
             matchLabels: { app: libreplay-worker }
       containers:
         - name: libreplay-worker
-          image: harbor.e-dani.com/homelab/libreplay-web:worker-profile-interview-11d82450727c@sha256:66602f038946eb9f5d485050f26673885543ba5e4ba2d077210ef1c5757c9900
+          image: harbor.e-dani.com/homelab/libreplay-web:worker-profile-interview-faf51c26@sha256:49789e4b7807bc7c7edca1686b841c2b6a7cfc14e289ebb8b3b6610cadb77ef2
           envFrom:
             - configMapRef: { name: libreplay-config }
           env:
