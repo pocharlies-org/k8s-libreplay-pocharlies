@@ -133,8 +133,7 @@ metadata:
   namespace: libreplay
 spec:
   serviceName: libreplay-postgres
-  # replicas: 0 -> ventana de migracion longhorn a local-path (2026-08-05)
-  replicas: 0
+  replicas: 1
   selector: { matchLabels: { app: libreplay-postgres } }
   template:
     metadata: { labels: { app: libreplay-postgres } }
@@ -166,7 +165,7 @@ spec:
             periodSeconds: 10
       volumes:
         - name: data
-          persistentVolumeClaim: { claimName: libreplay-postgres-data }
+          persistentVolumeClaim: { claimName: libreplay-postgres-data-local }
 ---
 apiVersion: v1
 kind: Service
@@ -203,15 +202,14 @@ metadata:
   name: libreplay-meilisearch
   namespace: libreplay
 spec:
-  # replicas: 0 -> ventana de migracion longhorn a local-path (2026-08-05)
-  replicas: 0
+  replicas: 1
   strategy: { type: Recreate }
   selector: { matchLabels: { app: libreplay-meilisearch } }
   template:
     metadata: { labels: { app: libreplay-meilisearch } }
     spec:
       enableServiceLinks: false
-      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      nodeSelector: { topology: lan, kubernetes.io/arch: amd64, kubernetes.io/hostname: ubuntu }
       containers:
         - name: meilisearch
           image: getmeili/meilisearch:v1.10
@@ -229,7 +227,7 @@ spec:
             initialDelaySeconds: 10
       volumes:
         - name: data
-          persistentVolumeClaim: { claimName: libreplay-meilisearch-data }
+          persistentVolumeClaim: { claimName: libreplay-meilisearch-data-local }
 ---
 apiVersion: v1
 kind: Service
@@ -266,15 +264,14 @@ metadata:
   name: libreplay-minio
   namespace: libreplay
 spec:
-  # replicas: 0 -> ventana de migracion longhorn a local-path (2026-08-05)
-  replicas: 0
+  replicas: 1
   strategy: { type: Recreate }
   selector: { matchLabels: { app: libreplay-minio } }
   template:
     metadata: { labels: { app: libreplay-minio } }
     spec:
       enableServiceLinks: false
-      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      nodeSelector: { topology: lan, kubernetes.io/arch: amd64, kubernetes.io/hostname: ubuntu }
       containers:
         - name: minio
           image: minio/minio:RELEASE.2024-09-13T20-26-02Z
@@ -297,7 +294,7 @@ spec:
             initialDelaySeconds: 10
       volumes:
         - name: data
-          persistentVolumeClaim: { claimName: libreplay-minio-data }
+          persistentVolumeClaim: { claimName: libreplay-minio-data-local }
 ---
 apiVersion: v1
 kind: Service
