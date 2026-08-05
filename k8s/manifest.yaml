@@ -112,6 +112,20 @@ spec:
   resources: { requests: { storage: 20Gi } }
   storageClassName: longhorn
 ---
+# PVCs local-path: viven en /opt/local-path-provisioner del nodo `ubuntu`.
+# reclaimPolicy es Delete y no hay replicas: borrar el PVC destruye los datos.
+# WaitForFirstConsumer ata el volumen a ese nodo, por eso todo workload que los
+# monte lleva nodeSelector kubernetes.io/hostname: ubuntu.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: libreplay-postgres-data-local
+  namespace: libreplay
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 5Gi } }
+  storageClassName: local-path
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -172,6 +186,16 @@ spec:
   resources: { requests: { storage: 10Gi } }
   storageClassName: longhorn
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: libreplay-meilisearch-data-local
+  namespace: libreplay
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 2Gi } }
+  storageClassName: local-path
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -223,6 +247,16 @@ spec:
   accessModes: [ReadWriteOnce]
   resources: { requests: { storage: 100Gi } }
   storageClassName: longhorn
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: libreplay-minio-data-local
+  namespace: libreplay
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 20Gi } }
+  storageClassName: local-path
 ---
 apiVersion: apps/v1
 kind: Deployment
