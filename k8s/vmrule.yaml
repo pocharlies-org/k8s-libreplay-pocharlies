@@ -64,7 +64,7 @@ spec:
           expr: max by (dependency) (libreplay_dependency_latency_ms{namespace="libreplay",service="libreplay-web"}) > 2000
           for: 10m
           labels:
-            severity: warn
+            severity: warning
             area: dependency
             app: libreplay
           annotations:
@@ -74,7 +74,7 @@ spec:
           expr: sum by (queue) (libreplay_queue_jobs{namespace="libreplay",service="libreplay-web",state="failed"}) > 0
           for: 5m
           labels:
-            severity: warn
+            severity: warning
             area: queues
             app: libreplay
           annotations:
@@ -84,7 +84,7 @@ spec:
           expr: sum by (queue) (libreplay_queue_jobs{namespace="libreplay",service="libreplay-web",state=~"waiting|delayed"}) > 25
           for: 15m
           labels:
-            severity: warn
+            severity: warning
             area: queues
             app: libreplay
           annotations:
@@ -94,7 +94,7 @@ spec:
           expr: sum by (container) (increase(kube_pod_container_status_restarts_total{namespace="libreplay",container=~"libreplay-web|libreplay-worker"}[15m])) > 0
           for: 5m
           labels:
-            severity: warn
+            severity: warning
             area: kubernetes
             app: libreplay
           annotations:
@@ -117,7 +117,7 @@ spec:
           expr: probe_duration_seconds{job="libreplay-lan-synthetic",app="libreplay",endpoint="health"} > 2
           for: 10m
           labels:
-            severity: warn
+            severity: warning
             area: synthetics
             app: libreplay
           annotations:
@@ -127,7 +127,7 @@ spec:
           expr: avg_over_time(probe_success{job="libreplay-lan-synthetic",app="libreplay",endpoint="health"}[1h]) < 0.99
           for: 5m
           labels:
-            severity: warn
+            severity: warning
             area: slo
             app: libreplay
           annotations:
@@ -216,7 +216,7 @@ spec:
             libreplay:slo_synth_avail:ratio6h < 0.99
           for: 15m
           labels:
-            severity: warn
+            severity: warning
             area: slo
             app: libreplay
             slo: synthetic-availability
