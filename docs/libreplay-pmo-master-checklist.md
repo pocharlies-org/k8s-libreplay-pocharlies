@@ -2,7 +2,7 @@
 
 Status: `LAN-DEMO-READY / CREATOR-COMMERCE-HARDENED / PRODUCTION-NO-GO`
 Last updated: 2026-07-10 CEST
-Target: `https://libreplay.lan.e-dani.com`
+Target: `https://libreplay.e-dani.com`
 
 Current production overlay: `NOT-PRODUCTION-READY`.
 Evidence: [libreplay-production-readiness-pmo.md](./libreplay-production-readiness-pmo.md) records the PMO audit and follow-up validation. LAN validation, release automation, media worker foundation, image/video media groundwork, provider-neutral media/payment scaffolds, security mutation and Authz/BOLA gates, Redis-backed abuse budgets, staging contracts/intake, mobile/PWA/i18n gates, process-level web/worker HA, runtime metrics/alerts/dashboard, LAN uptime synthetic checks, multi-window LAN synthetic SLO policy, read-only route rehearsal, log aggregation policy, structured runtime logging, backup credential contract, non-web auth/jobs console hardening and dormant media orphan inventory GitOps contract are now prepared. Production is still blocked by real provider secrets, real SMTP delivery in staging/prod, staging mailbox secrets, approved real PSP integration, live CDN/signed media activation, manual Vault bootstrap + human evidence + Security/PMO dual signoff for orphan inventory activation, physical media purge/orphan cleanup execution, real media moderation, real-device mobile matrix, public trusted-proxy runtime proof, node/stateful HA, live scoped MinIO/PG backup credential provisioning and activation, media backup/restore rehearsal, non-destructive restore rehearsal, DR, compliance, external error-tracking activation, a dedicated LibrePlay receiver/pager or owner-approved real-fire rehearsal, residual dependency latency tuning and root-cause cleanup.

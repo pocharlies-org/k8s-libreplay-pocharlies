@@ -2,7 +2,7 @@
 
 Status: `NOT-PRODUCTION-READY`
 Last updated: 2026-06-24 CEST
-Target today: `https://libreplay.lan.e-dani.com`
+Target today: `https://libreplay.e-dani.com`
 
 ## Executive Position
 

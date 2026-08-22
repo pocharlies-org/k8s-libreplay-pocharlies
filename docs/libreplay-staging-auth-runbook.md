@@ -95,7 +95,7 @@ a separate staging environment before production can be considered.
 - [ ] Registration verification email drains through `auth-email` with no queue failures.
   Evidence required: `/api/health/deps` shows `authEmail` failed `0`.
 - [ ] Full LAN E2E still passes after staging work. Evidence required:
-  `BASE_URL=https://libreplay.lan.e-dani.com PWRETRIES=0 npx playwright test`.
+  `BASE_URL=https://libreplay.e-dani.com PWRETRIES=0 npx playwright test`.
 - [ ] Staging preflight is strict-green before runtime sync. Evidence required:
   `scripts/check-libreplay-staging-preflight.sh --strict`.
 

@@ -137,7 +137,7 @@ spec:
     # Target: 99.0% availability over a rolling 14d window (LAN-only; NOT a public
     # edge SLO). 14d is bounded by VMSingle retentionPeriod=15d and matches Loki
     # retention (336h). The SLI is a single blackbox health probe against
-    # https://libreplay.lan.e-dani.com/api/health; do not over-claim public/edge
+    # https://libreplay.e-dani.com/api/health; the canonical split-DNS endpoint
     # coverage. Burn-rate windows are all <= 3d so they evaluate within retention;
     # only error_budget_remaining_ratio (14d) depends on accrued history.
     - name: libreplay.slo
@@ -193,7 +193,7 @@ spec:
             burnrate: fast
           annotations:
             summary: "LibrePlay SLO fast error-budget burn (LAN synthetic availability)"
-            description: "Fast burn (1h and 5m availability both < 0.856, ~14.4x the 99% budget) for the LAN synthetic SLI. SLI is LAN-only (https://libreplay.lan.e-dani.com/api/health), not a public/edge signal. This alert routes today to the shared Synapse Alertmanager receiver for visibility; a dedicated LibrePlay pager is NOT active yet (cross-tenant follow-up)."
+            description: "Fast burn (1h and 5m availability both < 0.856, ~14.4x the 99% budget) for the canonical split-DNS synthetic SLI (https://libreplay.e-dani.com/api/health). This alert routes today to the shared Synapse Alertmanager receiver for visibility; a dedicated LibrePlay pager is NOT active yet (cross-tenant follow-up)."
         - alert: LibrePlaySLOErrorBudgetBurnMedium
           expr: |
             libreplay:slo_synth_avail:ratio6h < 0.94
@@ -208,7 +208,7 @@ spec:
             burnrate: medium
           annotations:
             summary: "LibrePlay SLO medium error-budget burn (LAN synthetic availability)"
-            description: "Medium burn (6h and 30m availability both < 0.94, ~6x the 99% budget) for the LAN synthetic SLI. SLI is LAN-only (https://libreplay.lan.e-dani.com/api/health), not a public/edge signal. This alert routes today to the shared Synapse Alertmanager receiver for visibility; a dedicated LibrePlay pager is NOT active yet (cross-tenant follow-up)."
+            description: "Medium burn (6h and 30m availability both < 0.94, ~6x the 99% budget) for the canonical split-DNS synthetic SLI (https://libreplay.e-dani.com/api/health). This alert routes today to the shared Synapse Alertmanager receiver for visibility; a dedicated LibrePlay pager is NOT active yet (cross-tenant follow-up)."
         - alert: LibrePlaySLOErrorBudgetBurnSlow
           expr: |
             libreplay:slo_synth_avail:ratio3d < 0.99
@@ -223,4 +223,4 @@ spec:
             burnrate: slow
           annotations:
             summary: "LibrePlay SLO slow error-budget burn (LAN synthetic availability)"
-            description: "Slow/ticket-level burn (3d and 6h availability both < 0.99) for the LAN synthetic SLI; canonical successor to the 1h proxy. SLI is LAN-only (https://libreplay.lan.e-dani.com/api/health), not a public/edge signal. This alert routes today to the shared Synapse Alertmanager receiver for visibility; a dedicated LibrePlay pager is NOT active yet (cross-tenant follow-up)."
+            description: "Slow/ticket-level burn (3d and 6h availability both < 0.99) for the canonical split-DNS synthetic SLI (https://libreplay.e-dani.com/api/health). This alert routes today to the shared Synapse Alertmanager receiver for visibility; a dedicated LibrePlay pager is NOT active yet (cross-tenant follow-up)."

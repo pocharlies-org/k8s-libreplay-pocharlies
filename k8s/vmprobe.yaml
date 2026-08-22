@@ -22,4 +22,4 @@ spec:
         synthetic: uptime
         endpoint: health
       targets:
-        - https://libreplay.lan.e-dani.com/api/health
+        - https://libreplay.e-dani.com/api/health

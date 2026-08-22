@@ -48,8 +48,8 @@ metadata:
 data:
   NODE_ENV: production
   DEPLOYMENT_MODE: lan-demo
-  APP_BASE_URL: https://libreplay.lan.e-dani.com
-  AUTH_URL: https://libreplay.lan.e-dani.com
+  APP_BASE_URL: https://libreplay.e-dani.com
+  AUTH_URL: https://libreplay.e-dani.com
   AUTH_TRUST_HOST: "true"
   DEFAULT_LOCALE: es
   SUPPORTED_LOCALES: es,en,fr,de,pt
@@ -67,7 +67,7 @@ data:
   MAIL_FROM: LibrePlay <noreply@libreplay.local>
   SMTP_SECURE: "false"
   ENABLE_LAN_DEMO_LOGIN: "true"
-  LAN_DEMO_ALLOWED_HOSTS: libreplay.lan.e-dani.com
+  LAN_DEMO_ALLOWED_HOSTS: libreplay.e-dani.com,libreplay.lan.e-dani.com
   LAN_DEMO_ALLOWED_CIDRS: 127.0.0.1/32,::1/128,10.0.0.0/8,100.64.0.0/10,172.16.0.0/12,192.168.0.0/16
   USE_MOCK_OAUTH: "true"
   PAYMENT_PROVIDER: mock
