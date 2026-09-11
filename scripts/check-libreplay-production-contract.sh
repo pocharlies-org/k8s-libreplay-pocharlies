@@ -129,11 +129,11 @@ check_static() {
     if ! grep -Eq "^[[:space:]]*-[[:space:]]*secretKey:[[:space:]]*${key}[[:space:]]*$" "$manifest"; then
       fail "static production contract missing ExternalSecret key ${key}"
     fi
-    if ! grep -Eq "remoteRef:[[:space:]]*\\{ key: secret/libreplay/production, property: ${key} \\}" "$manifest"; then
-      fail "static production contract ${key} must read from secret/libreplay/production"
+    if ! grep -Eq "remoteRef:[[:space:]]*\\{ key: libreplay-production/${key} \\}" "$manifest"; then
+      fail "static production contract ${key} must read from the libreplay-production 1Password item"
     fi
   done
-  info "production contract declares required ExternalSecret key names at secret/libreplay/production"
+  info "production contract declares required ExternalSecret key names at the libreplay-production item"
 
   if grep -Eq 'dataFrom:' "$manifest"; then
     fail "production contract must not bulk-import the LAN secret shape"
@@ -146,7 +146,7 @@ check_static() {
   if ! grep -Eq 'type:[[:space:]]*kubernetes\.io/dockerconfigjson' "$manifest"; then
     fail "production contract missing dockerconfigjson template for harbor-pull"
   fi
-  if ! grep -Eq 'remoteRef:[[:space:]]*\{ key: infra/harbor/k8s-runtime-pull, property: dockerconfigjson \}' "$manifest"; then
+  if ! grep -Eq 'remoteRef:[[:space:]]*\{ key: infra-harbor-k8s-runtime-pull/dockerconfigjson \}' "$manifest"; then
     fail "production contract missing pull-only harbor-pull remoteRef"
   fi
   info "production contract declares harbor-pull ExternalSecret without printing registry credentials"
