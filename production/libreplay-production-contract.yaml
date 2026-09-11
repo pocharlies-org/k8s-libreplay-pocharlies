@@ -17,57 +17,57 @@ metadata:
     app.kubernetes.io/name: libreplay
     libreplay.e-dani.com/environment: production
 spec:
-  refreshInterval: 1h
-  secretStoreRef: { name: vault-backend, kind: ClusterSecretStore }
+  refreshInterval: 6h
+  secretStoreRef: { name: onepassword, kind: ClusterSecretStore }
   target:
     name: libreplay-secrets
     creationPolicy: Owner
     deletionPolicy: Retain
   data:
     - secretKey: DATABASE_URL
-      remoteRef: { key: secret/libreplay/production, property: DATABASE_URL }
+      remoteRef: { key: libreplay-production/DATABASE_URL }
     - secretKey: REDIS_URL
-      remoteRef: { key: secret/libreplay/production, property: REDIS_URL }
+      remoteRef: { key: libreplay-production/REDIS_URL }
     - secretKey: AUTH_SECRET
-      remoteRef: { key: secret/libreplay/production, property: AUTH_SECRET }
+      remoteRef: { key: libreplay-production/AUTH_SECRET }
     - secretKey: MINIO_ACCESS_KEY
-      remoteRef: { key: secret/libreplay/production, property: MINIO_ACCESS_KEY }
+      remoteRef: { key: libreplay-production/MINIO_ACCESS_KEY }
     - secretKey: MINIO_SECRET_KEY
-      remoteRef: { key: secret/libreplay/production, property: MINIO_SECRET_KEY }
+      remoteRef: { key: libreplay-production/MINIO_SECRET_KEY }
     - secretKey: MEILISEARCH_API_KEY
-      remoteRef: { key: secret/libreplay/production, property: MEILISEARCH_API_KEY }
+      remoteRef: { key: libreplay-production/MEILISEARCH_API_KEY }
     - secretKey: DB_USER
-      remoteRef: { key: secret/libreplay/production, property: DB_USER }
+      remoteRef: { key: libreplay-production/DB_USER }
     - secretKey: DB_PASSWORD
-      remoteRef: { key: secret/libreplay/production, property: DB_PASSWORD }
+      remoteRef: { key: libreplay-production/DB_PASSWORD }
     - secretKey: SEED_USER_PASSWORD
-      remoteRef: { key: secret/libreplay/production, property: SEED_USER_PASSWORD }
+      remoteRef: { key: libreplay-production/SEED_USER_PASSWORD }
     - secretKey: GOOGLE_CLIENT_ID
-      remoteRef: { key: secret/libreplay/production, property: GOOGLE_CLIENT_ID }
+      remoteRef: { key: libreplay-production/GOOGLE_CLIENT_ID }
     - secretKey: GOOGLE_CLIENT_SECRET
-      remoteRef: { key: secret/libreplay/production, property: GOOGLE_CLIENT_SECRET }
+      remoteRef: { key: libreplay-production/GOOGLE_CLIENT_SECRET }
     - secretKey: FACEBOOK_CLIENT_ID
-      remoteRef: { key: secret/libreplay/production, property: FACEBOOK_CLIENT_ID }
+      remoteRef: { key: libreplay-production/FACEBOOK_CLIENT_ID }
     - secretKey: FACEBOOK_CLIENT_SECRET
-      remoteRef: { key: secret/libreplay/production, property: FACEBOOK_CLIENT_SECRET }
+      remoteRef: { key: libreplay-production/FACEBOOK_CLIENT_SECRET }
     - secretKey: OAUTH_TOKEN_ENC_KEY
-      remoteRef: { key: secret/libreplay/production, property: OAUTH_TOKEN_ENC_KEY }
+      remoteRef: { key: libreplay-production/OAUTH_TOKEN_ENC_KEY }
     - secretKey: SMTP_HOST
-      remoteRef: { key: secret/libreplay/production, property: SMTP_HOST }
+      remoteRef: { key: libreplay-production/SMTP_HOST }
     - secretKey: SMTP_PORT
-      remoteRef: { key: secret/libreplay/production, property: SMTP_PORT }
+      remoteRef: { key: libreplay-production/SMTP_PORT }
     - secretKey: SMTP_USER
-      remoteRef: { key: secret/libreplay/production, property: SMTP_USER }
+      remoteRef: { key: libreplay-production/SMTP_USER }
     - secretKey: SMTP_PASSWORD
-      remoteRef: { key: secret/libreplay/production, property: SMTP_PASSWORD }
+      remoteRef: { key: libreplay-production/SMTP_PASSWORD }
     - secretKey: METRICS_BEARER_TOKEN
-      remoteRef: { key: secret/libreplay/production, property: METRICS_BEARER_TOKEN }
+      remoteRef: { key: libreplay-production/METRICS_BEARER_TOKEN }
     - secretKey: LIVEKIT_API_KEY
-      remoteRef: { key: secret/libreplay/production, property: LIVEKIT_API_KEY }
+      remoteRef: { key: libreplay-production/LIVEKIT_API_KEY }
     - secretKey: LIVEKIT_API_SECRET
-      remoteRef: { key: secret/libreplay/production, property: LIVEKIT_API_SECRET }
+      remoteRef: { key: libreplay-production/LIVEKIT_API_SECRET }
     - secretKey: LIVE_STREAM_SIGNING_KEY
-      remoteRef: { key: secret/libreplay/production, property: LIVE_STREAM_SIGNING_KEY }
+      remoteRef: { key: libreplay-production/LIVE_STREAM_SIGNING_KEY }
 ---
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
@@ -78,8 +78,8 @@ metadata:
     app.kubernetes.io/name: libreplay
     libreplay.e-dani.com/environment: production
 spec:
-  refreshInterval: 1h
-  secretStoreRef: { name: vault-backend, kind: ClusterSecretStore }
+  refreshInterval: 6h
+  secretStoreRef: { name: onepassword, kind: ClusterSecretStore }
   target:
     name: harbor-pull
     creationPolicy: Owner
@@ -88,7 +88,7 @@ spec:
       type: kubernetes.io/dockerconfigjson
   data:
     - secretKey: .dockerconfigjson
-      remoteRef: { key: infra/harbor/k8s-runtime-pull, property: dockerconfigjson }
+      remoteRef: { key: infra-harbor-k8s-runtime-pull/dockerconfigjson }
 ---
 apiVersion: v1
 kind: Service
