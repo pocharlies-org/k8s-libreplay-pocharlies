@@ -10,13 +10,13 @@ putting root/admin credentials into recurring jobs.
 
 ## Secret Contract
 
-Vault path:
+1Password item (vault `k8s-pocharlies`):
 
 ```text
-secret/libreplay/backup
+libreplay-backup
 ```
 
-Allowed properties only:
+Allowed fields only:
 
 ```text
 MINIO_BACKUP_ACCESS_KEY
@@ -26,7 +26,7 @@ PG_BACKUP_PASSWORD
 ```
 
 `externalsecret.yaml` materializes those keys as
-`Secret/libreplay-backup-secrets` through `ClusterSecretStore/vault-backend`.
+`Secret/libreplay-backup-secrets` through `ClusterSecretStore/onepassword`.
 It uses explicit `remoteRef` entries and intentionally avoids `dataFrom`.
 
 ## Bootstrap Order
@@ -34,13 +34,13 @@ It uses explicit `remoteRef` entries and intentionally avoids `dataFrom`.
 1. Security/PMO approve activation.
 2. A human/operator mints a MinIO service account from an audited, one-time
    admin session and attaches `minio-backup-policy.json`.
-3. The operator writes only the minted service-account keys to
-   `secret/libreplay/backup`.
+3. The operator writes only the minted service-account keys to the
+   `libreplay-backup` 1Password item.
 4. The operator runs `postgres-backup-role.sql` while connected to
    `libreplay_lan`, passing the password as the psql variable
    `pg_backup_password`.
 5. The operator writes `PG_BACKUP_USER=libreplay_backup` and the generated
-   password to `secret/libreplay/backup`.
+   password to the `libreplay-backup` 1Password item.
 6. PMO verifies the ExternalSecret, role grants and MinIO policy without
    printing secret values.
 7. Only then may the ExternalSecret and later backup CronJobs be added to the

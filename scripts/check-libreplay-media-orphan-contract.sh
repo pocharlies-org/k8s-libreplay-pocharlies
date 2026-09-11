@@ -68,8 +68,8 @@ require_pattern "$external_secret" 'name:[[:space:]]*libreplay-media-orphan-secr
   "orphan ExternalSecret must be named libreplay-media-orphan-secrets"
 require_pattern "$external_secret" 'namespace:[[:space:]]*libreplay[[:space:]]*$' \
   "orphan ExternalSecret must target namespace libreplay"
-require_pattern "$external_secret" 'name:[[:space:]]*vault-backend[[:space:]]*$' \
-  "orphan ExternalSecret must use ClusterSecretStore vault-backend"
+require_pattern "$external_secret" 'name:[[:space:]]*onepassword[[:space:]]*$' \
+  "orphan ExternalSecret must use ClusterSecretStore onepassword"
 require_pattern "$external_secret" 'kind:[[:space:]]*ClusterSecretStore[[:space:]]*$' \
   "orphan ExternalSecret must use ClusterSecretStore kind"
 reject_pattern "$external_secret" 'dataFrom:' \
@@ -78,13 +78,13 @@ reject_pattern "$external_secret" 'dataFrom:' \
 for key in MINIO_ORPHAN_ACCESS_KEY MINIO_ORPHAN_SECRET_KEY PG_ORPHAN_DSN; do
   require_pattern "$external_secret" "secretKey:[[:space:]]*${key}[[:space:]]*$" \
     "orphan ExternalSecret missing secretKey ${key}"
-  require_pattern "$external_secret" "property:[[:space:]]*${key}[[:space:]]*$" \
-    "orphan ExternalSecret missing remote property ${key}"
+  require_pattern "$external_secret" "key:[[:space:]]*libreplay-media-orphan/${key}[[:space:]]*$" \
+    "orphan ExternalSecret missing remote field ${key} of the libreplay-media-orphan item"
 done
 
-remote_count="$(grep -Ec 'key:[[:space:]]*secret/libreplay/media-orphan[[:space:]]*$' "$external_secret")"
-[ "$remote_count" -eq 3 ] || fail "all orphan remoteRefs must use secret/libreplay/media-orphan; found ${remote_count}"
-ok "orphan ExternalSecret uses explicit keys from secret/libreplay/media-orphan"
+remote_count="$(grep -Ec 'key:[[:space:]]*libreplay-media-orphan/' "$external_secret")"
+[ "$remote_count" -eq 3 ] || fail "all orphan remoteRefs must use the libreplay-media-orphan 1Password item; found ${remote_count}"
+ok "orphan ExternalSecret uses explicit fields from the libreplay-media-orphan item"
 
 # ---------------------------------------------------------------------------
 # 2. CronJob -- dormant, scoped secret, pinned worker digest, read-only, no

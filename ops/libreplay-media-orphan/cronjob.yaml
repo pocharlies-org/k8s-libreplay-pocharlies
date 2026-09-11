@@ -7,8 +7,9 @@
 #      kustomization), so Argo CD never syncs it.
 #
 # It must NOT be activated (un-suspended / added to the Argo-synced path) until:
-#   * Vault `secret/libreplay/media-orphan` is populated with the scoped,
-#     read-only MinIO service-account keys and the read-only Postgres DSN,
+#   * 1Password item `libreplay-media-orphan` (vault k8s-pocharlies) is populated
+#     with the scoped, read-only MinIO service-account keys and the read-only
+#     Postgres DSN,
 #   * ExternalSecret/libreplay-media-orphan-secrets is Ready and the Secret
 #     carries all required key names,
 #   * the activation evidence template is filled with redacted proof, and

@@ -43,10 +43,10 @@ reject_pattern "$manifest" 'dataFrom:' 'LiveKit ExternalSecret does not bulk imp
 
 for key in LIVEKIT_API_KEY LIVEKIT_API_SECRET LIVEKIT_REDIS_PASSWORD LIVEKIT_S3_ENDPOINT LIVEKIT_S3_REGION LIVEKIT_S3_BUCKET LIVEKIT_S3_ACCESS_KEY LIVEKIT_S3_SECRET_KEY; do
   require_pattern "$manifest" "secretKey:[[:space:]]*${key}" "LiveKit ExternalSecret declares ${key}"
-  require_pattern "$manifest" "property: ${key}" "LiveKit ExternalSecret maps ${key} by explicit property"
+  require_pattern "$manifest" "key: libreplay-(production|livekit-production)/${key}" "LiveKit ExternalSecret maps ${key} by explicit item field"
 done
-require_pattern "$manifest" 'key: secret/libreplay/production, property: LIVEKIT_API_KEY' 'LiveKit API key uses the same Vault path as the app contract'
-require_pattern "$manifest" 'key: secret/libreplay/production, property: LIVEKIT_API_SECRET' 'LiveKit API secret uses the same Vault path as the app contract'
+require_pattern "$manifest" 'key: libreplay-production/LIVEKIT_API_KEY' 'LiveKit API key uses the same 1Password item as the app contract'
+require_pattern "$manifest" 'key: libreplay-production/LIVEKIT_API_SECRET' 'LiveKit API secret uses the same 1Password item as the app contract'
 
 require_pattern "$manifest" 'livekit/livekit-server:v1\.9\.1@sha256:c039a1bfa154c8479ac369c380665638e92a7e9531e69664549c0c0d3eb65e63' 'LiveKit server image is immutable'
 require_pattern "$manifest" 'livekit/egress:v1\.13\.0@sha256:980ff439431df2c773573721ab6da19e15bdc1f049ab7cb80e87470bf174c12f' 'LiveKit egress image is immutable'

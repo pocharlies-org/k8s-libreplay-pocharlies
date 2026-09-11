@@ -56,8 +56,8 @@ require_pattern "$external_secret" 'name:[[:space:]]*libreplay-backup-secrets[[:
   "backup ExternalSecret must be named libreplay-backup-secrets"
 require_pattern "$external_secret" 'namespace:[[:space:]]*libreplay[[:space:]]*$' \
   "backup ExternalSecret must target namespace libreplay"
-require_pattern "$external_secret" 'name:[[:space:]]*vault-backend[[:space:]]*$' \
-  "backup ExternalSecret must use ClusterSecretStore vault-backend"
+require_pattern "$external_secret" 'name:[[:space:]]*onepassword[[:space:]]*$' \
+  "backup ExternalSecret must use ClusterSecretStore onepassword"
 require_pattern "$external_secret" 'kind:[[:space:]]*ClusterSecretStore[[:space:]]*$' \
   "backup ExternalSecret must use ClusterSecretStore kind"
 reject_pattern "$external_secret" 'dataFrom:' \
@@ -66,13 +66,13 @@ reject_pattern "$external_secret" 'dataFrom:' \
 for key in MINIO_BACKUP_ACCESS_KEY MINIO_BACKUP_SECRET_KEY PG_BACKUP_USER PG_BACKUP_PASSWORD; do
   require_pattern "$external_secret" "secretKey:[[:space:]]*${key}[[:space:]]*$" \
     "backup ExternalSecret missing secretKey ${key}"
-  require_pattern "$external_secret" "property:[[:space:]]*${key}[[:space:]]*$" \
-    "backup ExternalSecret missing remote property ${key}"
+  require_pattern "$external_secret" "key:[[:space:]]*libreplay-backup/${key}[[:space:]]*$" \
+    "backup ExternalSecret missing remote field ${key} of the libreplay-backup item"
 done
 
-remote_count="$(grep -Ec 'key:[[:space:]]*secret/libreplay/backup[[:space:]]*$' "$external_secret")"
-[ "$remote_count" -eq 4 ] || fail "all backup remoteRefs must use secret/libreplay/backup; found ${remote_count}"
-ok "backup ExternalSecret uses explicit keys from secret/libreplay/backup"
+remote_count="$(grep -Ec 'key:[[:space:]]*libreplay-backup/' "$external_secret")"
+[ "$remote_count" -eq 4 ] || fail "all backup remoteRefs must use the libreplay-backup 1Password item; found ${remote_count}"
+ok "backup ExternalSecret uses explicit fields from the libreplay-backup item"
 
 reject_pattern "$kustomization" 'ops/libreplay-backup|libreplay-backup-secrets' \
   "backup contract must remain outside the Argo-synced kustomization"

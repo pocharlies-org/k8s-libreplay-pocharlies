@@ -129,7 +129,7 @@ if [ "$mode" = "static" ]; then
   if ! grep -Eq 'type:[[:space:]]*kubernetes\.io/dockerconfigjson' "$manifest"; then
     fail "static contract missing dockerconfigjson template for harbor-pull"
   fi
-  if ! grep -Eq 'remoteRef:[[:space:]]*\{ key: infra/harbor/k8s-runtime-pull, property: dockerconfigjson \}' "$manifest"; then
+  if ! grep -Eq 'remoteRef:[[:space:]]*\{ key: infra-harbor-k8s-runtime-pull/dockerconfigjson \}' "$manifest"; then
     fail "static contract missing pull-only harbor-pull remoteRef"
   fi
   info "static contract declares harbor-pull ExternalSecret without printing registry credentials"

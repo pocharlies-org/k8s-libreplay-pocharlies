@@ -20,13 +20,13 @@ explicitly out of scope here.
 
 ## Secret Contract
 
-Vault path:
+1Password item (vault `k8s-pocharlies`):
 
 ```text
-secret/libreplay/media-orphan
+libreplay-media-orphan
 ```
 
-Allowed properties only:
+Allowed fields only:
 
 ```text
 MINIO_ORPHAN_ACCESS_KEY
@@ -36,7 +36,7 @@ PG_ORPHAN_DSN
 
 `externalsecret.yaml` materializes those keys as
 `Secret/libreplay-media-orphan-secrets` through
-`ClusterSecretStore/vault-backend`. It uses explicit `remoteRef` entries and
+`ClusterSecretStore/onepassword`. It uses explicit `remoteRef` entries and
 intentionally avoids `dataFrom`.
 
 `cronjob.yaml` maps those scoped keys onto the worker's expected env names:
@@ -57,16 +57,16 @@ from `ConfigMap/libreplay-config` via `envFrom`; the CronJob never references
 2. A human/operator mints a MinIO service account from an audited, one-time
    admin session and attaches `minio-orphan-policy.json` (list-only on
    `libreplay-media`).
-3. The operator writes only the minted service-account keys to
-   `secret/libreplay/media-orphan` as `MINIO_ORPHAN_ACCESS_KEY` /
+3. The operator writes only the minted service-account keys to the
+   `libreplay-media-orphan` 1Password item as `MINIO_ORPHAN_ACCESS_KEY` /
    `MINIO_ORPHAN_SECRET_KEY`.
 4. The operator runs `postgres-orphan-role.sql` while connected to
    `libreplay_lan`, passing the password via the environment variable
    `PG_ORPHAN_PASSWORD` (never as a command-line argument or shell history).
 5. The operator builds the read-only DSN
    `postgresql://libreplay_media_orphan:<password>@<host>:5432/libreplay_lan`
-   outside any committed file and writes it to
-   `secret/libreplay/media-orphan` as `PG_ORPHAN_DSN`.
+   outside any committed file and writes it to the `libreplay-media-orphan`
+   1Password item as `PG_ORPHAN_DSN`.
 6. PMO verifies the ExternalSecret, role grants and MinIO policy without
    printing secret values.
 7. Only then may the ExternalSecret and the `suspend: true` CronJob be added to

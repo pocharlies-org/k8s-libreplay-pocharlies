@@ -3,9 +3,10 @@
 Owner: PMO / DevOps / Security
 Date: 2026-06-20
 
-Scope: prepare a production-only Vault KV v2 record for the static production
+Scope: prepare a production-only 1Password item for the static production
 contract at `production/libreplay-production-contract.yaml`. This document does
-not approve a runtime launch.
+not approve a runtime launch. (Until SC-496 this was a Vault KV v2 record; the
+ExternalSecrets now read the `onepassword` ClusterSecretStore.)
 
 ## RHO Checklist
 
@@ -14,7 +15,8 @@ not approve a runtime launch.
 - [x] Do not print or commit secret values. Evidence: this document contains
   only key names, source expectations and validation rules.
 - [x] Keep production separate from LAN and staging. Evidence: production uses
-  namespace `libreplay-production` and Vault path `secret/libreplay/production`.
+  namespace `libreplay-production` and 1Password item `libreplay-production`
+  (vault `k8s-pocharlies`).
 - [x] Do not sync runtime workloads until real provider, PSP, media/CDN,
   safety, backup and compliance gates are closed.
 - [x] Do not assume Stripe as PSP. Evidence: production contract keeps
@@ -23,8 +25,9 @@ not approve a runtime launch.
 
 ### Acceptance Criteria
 
-- [ ] Vault KV v2 record exists at `secret/libreplay/production`. Evidence
-  required: ESO status `Ready=True` for production `ExternalSecret`.
+- [ ] 1Password item `libreplay-production` exists in vault `k8s-pocharlies`
+  with the fields below. Evidence required: ESO status `Ready=True` for
+  production `ExternalSecret`.
 - [ ] Materialized Kubernetes Secret contains the required key names below.
   Evidence required: key-name-only check, never values.
 - [ ] Google OAuth app is approved/configured for
@@ -42,7 +45,7 @@ not approve a runtime launch.
 - [ ] `scripts/check-libreplay-production-contract.sh` passes before any
   production Argo app is created.
 
-## Required Vault Fields
+## Required Item Fields
 
 | Key | Source | Validation | Status |
 | --- | --- | --- | --- |
@@ -93,7 +96,7 @@ set +x
 # export SMTP_PASSWORD=...
 # export METRICS_BEARER_TOKEN=...
 
-vault kv put secret/libreplay/production \
+op item edit libreplay-production --vault=k8s-pocharlies \
   DATABASE_URL="$DATABASE_URL" \
   REDIS_URL="$REDIS_URL" \
   AUTH_SECRET="$AUTH_SECRET" \
