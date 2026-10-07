@@ -245,7 +245,7 @@ spec:
       nodeSelector: { topology: lan, kubernetes.io/arch: amd64, kubernetes.io/hostname: ubuntu }
       containers:
         - name: minio
-          image: minio/minio:RELEASE.2024-09-13T20-26-02Z
+          image: harbor.e-dani.com/homelab/minio:RELEASE.2024-09-13T20-26-02Z
           args: [server, /data, --console-address, ":9001"]
           ports:
             - { name: api, containerPort: 9000 }
