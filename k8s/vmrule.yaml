@@ -70,16 +70,23 @@ spec:
           annotations:
             summary: "LibrePlay dependency {{ $labels.dependency }} latency is high"
             description: "The /api/health/deps runtime check for {{ $labels.dependency }} has stayed above 2000 ms for more than 10 minutes."
+        # The {state="failed"} gauge is the BullMQ failed set, which is
+        # cumulative: a job that failed and stays there (removeOnFail prunes
+        # by age/count, not on success) keeps a >0 comparison firing forever
+        # (INFRA-889: one stale expire-custom-requests failure from the
+        # 2026-10-07 Postgres outage pinned the alert on for days). Alert on
+        # NEW failures instead: increase() over 1h treats a cleanup drop as a
+        # reset (contributes 0) and each rise as new failures.
         - alert: LibrePlayQueueFailures
-          expr: sum by (queue) (libreplay_queue_jobs{namespace="libreplay",service="libreplay-web",state="failed"}) > 0
+          expr: sum by (queue) (increase(libreplay_queue_jobs{namespace="libreplay",service="libreplay-web",state="failed"}[1h])) > 0
           for: 5m
           labels:
             severity: warning
             area: queues
             app: libreplay
           annotations:
-            summary: "LibrePlay queue {{ $labels.queue }} has failed jobs"
-            description: "BullMQ queue {{ $labels.queue }} has failed jobs for more than 5 minutes. Check worker logs and retry/dead-letter policy."
+            summary: "LibrePlay queue {{ $labels.queue }} has new failed jobs"
+            description: "BullMQ queue {{ $labels.queue }} gained failed jobs in the last hour (new failures, not the cumulative failed set). Check worker logs and retry/dead-letter policy."
         - alert: LibrePlayQueueBacklogHigh
           expr: sum by (queue) (libreplay_queue_jobs{namespace="libreplay",service="libreplay-web",state=~"waiting|delayed"}) > 25
           for: 15m
