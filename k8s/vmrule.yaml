@@ -11,19 +11,23 @@ spec:
     - name: libreplay.runtime
       interval: 30s
       rules:
+        # SC-2640 (RCA 29-10): el camino compartido de sondas (metallb VIP + traefik-lan,
+        # réplica única en el nodo ubuntu) se atraganta en blips de 1-4 min bajo presión de CPU
+        # del nodo (loadavg ~10-20/16); la app no se cae (pods 0 reinicios, /api/health 200).
+        # for: 10m para que un blip ≤4 min no abra critical; una caída real sigue ardiendo a los 10 min.
         - alert: LibrePlayMetricsScrapeMissing
           expr: |
             (up{namespace="libreplay",job="libreplay-web"} == 0)
             or
             absent(up{namespace="libreplay",job="libreplay-web"})
-          for: 2m
+          for: 10m
           labels:
             severity: critical
             area: observability
             app: libreplay
           annotations:
             summary: "LibrePlay metrics scrape is missing"
-            description: "VictoriaMetrics has not scraped libreplay-web metrics for more than 2 minutes. Check VMServiceScrape/libreplay-web, Service labels and /api/metrics."
+            description: "VictoriaMetrics has not scraped libreplay-web metrics for more than 10 minutes. Check VMServiceScrape/libreplay-web, Service labels and /api/metrics."
         - alert: LibrePlayDeploymentUnavailable
           expr: |
             kube_deployment_spec_replicas{namespace="libreplay",deployment=~"libreplay-web|libreplay-worker"}
@@ -110,16 +114,18 @@ spec:
     - name: libreplay.synthetics
       interval: 30s
       rules:
+        # SC-2640 (RCA 29-10): blips del camino compartido (VIP metallb + traefik-lan en ubuntu)
+        # de hasta 4 min con la app sana; for: 10m los ignora, una caída real sigue ardiendo.
         - alert: LibrePlaySyntheticDown
           expr: probe_success{job="libreplay-lan-synthetic",app="libreplay",endpoint="health"} == 0
-          for: 3m
+          for: 10m
           labels:
             severity: critical
             area: synthetics
             app: libreplay
           annotations:
             summary: "LibrePlay LAN synthetic health probe is failing"
-            description: "The blackbox probe for {{ $labels.instance }} has failed for more than 3 minutes. Check Traefik LAN routing, TLS and /api/health."
+            description: "The blackbox probe for {{ $labels.instance }} has failed for more than 10 minutes. Check Traefik LAN routing, TLS and /api/health."
         - alert: LibrePlaySyntheticLatencyHigh
           expr: probe_duration_seconds{job="libreplay-lan-synthetic",app="libreplay",endpoint="health"} > 2
           for: 10m
@@ -130,8 +136,12 @@ spec:
           annotations:
             summary: "LibrePlay LAN synthetic probe latency is high"
             description: "The blackbox probe for {{ $labels.instance }} has stayed above 2 seconds for more than 10 minutes."
+        # SC-2640 (RCA 29-10): con 120 sondas/h (paso 30s), <0.99 se cruzaba con 2 sondas fallidas
+        # (0.983): cualquier blip del camino compartido reabría el incidente de Keep. Con <0.90 un
+        # blip de 4 min (0.933) no la cruza; una caída real de ≥7 min sí (medido con query_range
+        # sobre vmsingle en las ventanas del 27 y 29-10: 0 series con la expr nueva).
         - alert: LibrePlaySyntheticAvailabilityBudgetLow
-          expr: avg_over_time(probe_success{job="libreplay-lan-synthetic",app="libreplay",endpoint="health"}[1h]) < 0.99
+          expr: avg_over_time(probe_success{job="libreplay-lan-synthetic",app="libreplay",endpoint="health"}[1h]) < 0.90
           for: 5m
           labels:
             severity: warning
@@ -139,7 +149,7 @@ spec:
             app: libreplay
           annotations:
             summary: "LibrePlay LAN synthetic availability budget is low"
-            description: "The 1-hour availability proxy for {{ $labels.instance }} is below 99%. This is a 1h supplement/proxy only; the canonical multi-window multi-burn-rate error-budget SLO policy lives in the libreplay.slo group. LAN-only SLI; routes today to the shared Synapse receiver (visibility), not a dedicated LibrePlay pager."
+            description: "The 1-hour availability proxy for {{ $labels.instance }} is below 90%. This is a 1h supplement/proxy only; the canonical multi-window multi-burn-rate error-budget SLO policy lives in the libreplay.slo group. LAN-only SLI; routes today to the shared Synapse receiver (visibility), not a dedicated LibrePlay pager."
     # Canonical SLO policy for the LibrePlay LAN synthetic availability SLI.
     # Target: 99.0% availability over a rolling 14d window (LAN-only; NOT a public
     # edge SLO). 14d is bounded by VMSingle retentionPeriod=15d and matches Loki
