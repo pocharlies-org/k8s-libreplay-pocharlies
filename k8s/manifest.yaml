@@ -103,14 +103,27 @@ data:
 
 # ── PostgreSQL ────────────────────────────────────────────────────────────────
 ---
-# Almacenamiento local del nodo `ubuntu`, en /opt/local-path-provisioner.
-# reclaimPolicy es Delete y no hay replicas: borrar el PVC destruye los datos.
-# WaitForFirstConsumer ata el volumen a ese nodo, por eso todo workload que los
-# monte lleva nodeSelector kubernetes.io/hostname: ubuntu.
+# Almacenamiento local (local-path, /opt/local-path-provisioner). reclaimPolicy es
+# Delete y no hay replicas: borrar un PVC destruye sus datos.
+# INFRA-1103 (01-11): libreplay pasa a `sauvage` y queda APAGADO (replicas 0).
+# Los PVC `-sauvage` llevan la copia de los datos en el disco de sauvage; los
+# `-local` siguen atados al x86 con el original hasta verificar la copia.
+# WaitForFirstConsumer ata cada volumen al nodo de su primer pod: los workloads
+# llevan nodeSelector kubernetes.io/hostname: sauvage.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: libreplay-postgres-data-local
+  namespace: libreplay
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 5Gi } }
+  storageClassName: local-path
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: libreplay-postgres-data-sauvage
   namespace: libreplay
 spec:
   accessModes: [ReadWriteOnce]
@@ -124,16 +137,14 @@ metadata:
   namespace: libreplay
 spec:
   serviceName: libreplay-postgres
-  replicas: 1
+  replicas: 0  # apagado (INFRA-1103, 01-11)
   selector: { matchLabels: { app: libreplay-postgres } }
   template:
     metadata: { labels: { app: libreplay-postgres } }
     spec:
       enableServiceLinks: false
-      nodeSelector:
-        topology: lan
-        kubernetes.io/arch: amd64
-        kubernetes.io/hostname: ubuntu
+      nodeSelector: { kubernetes.io/hostname: sauvage }
+      tolerations: [{ key: role, operator: Equal, value: edge, effect: NoSchedule }]
       containers:
         - name: postgres
           image: postgres:16-alpine
@@ -156,7 +167,7 @@ spec:
             periodSeconds: 10
       volumes:
         - name: data
-          persistentVolumeClaim: { claimName: libreplay-postgres-data-local }
+          persistentVolumeClaim: { claimName: libreplay-postgres-data-sauvage }
 ---
 apiVersion: v1
 kind: Service
@@ -177,20 +188,31 @@ spec:
   resources: { requests: { storage: 2Gi } }
   storageClassName: local-path
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: libreplay-meilisearch-data-sauvage
+  namespace: libreplay
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 2Gi } }
+  storageClassName: local-path
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: libreplay-meilisearch
   namespace: libreplay
 spec:
-  replicas: 1
+  replicas: 0  # apagado (INFRA-1103, 01-11)
   strategy: { type: Recreate }
   selector: { matchLabels: { app: libreplay-meilisearch } }
   template:
     metadata: { labels: { app: libreplay-meilisearch } }
     spec:
       enableServiceLinks: false
-      nodeSelector: { topology: lan, kubernetes.io/arch: amd64, kubernetes.io/hostname: ubuntu }
+      nodeSelector: { kubernetes.io/hostname: sauvage }
+      tolerations: [{ key: role, operator: Equal, value: edge, effect: NoSchedule }]
       containers:
         - name: meilisearch
           image: getmeili/meilisearch:v1.10
@@ -208,7 +230,7 @@ spec:
             initialDelaySeconds: 10
       volumes:
         - name: data
-          persistentVolumeClaim: { claimName: libreplay-meilisearch-data-local }
+          persistentVolumeClaim: { claimName: libreplay-meilisearch-data-sauvage }
 ---
 apiVersion: v1
 kind: Service
@@ -229,20 +251,31 @@ spec:
   resources: { requests: { storage: 20Gi } }
   storageClassName: local-path
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: libreplay-minio-data-sauvage
+  namespace: libreplay
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 20Gi } }
+  storageClassName: local-path
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: libreplay-minio
   namespace: libreplay
 spec:
-  replicas: 1
+  replicas: 0  # apagado (INFRA-1103, 01-11)
   strategy: { type: Recreate }
   selector: { matchLabels: { app: libreplay-minio } }
   template:
     metadata: { labels: { app: libreplay-minio } }
     spec:
       enableServiceLinks: false
-      nodeSelector: { topology: lan, kubernetes.io/arch: amd64, kubernetes.io/hostname: ubuntu }
+      nodeSelector: { kubernetes.io/hostname: sauvage }
+      tolerations: [{ key: role, operator: Equal, value: edge, effect: NoSchedule }]
       containers:
         - name: minio
           image: harbor.e-dani.com/homelab/minio:RELEASE.2024-09-13T20-26-02Z
@@ -265,7 +298,7 @@ spec:
             initialDelaySeconds: 10
       volumes:
         - name: data
-          persistentVolumeClaim: { claimName: libreplay-minio-data-local }
+          persistentVolumeClaim: { claimName: libreplay-minio-data-sauvage }
 ---
 apiVersion: v1
 kind: Service
@@ -386,7 +419,7 @@ metadata:
     argocd.argoproj.io/sync-options: Replace=true
     argocd.argoproj.io/sync-wave: "4"
 spec:
-  replicas: 2
+  replicas: 0  # apagado (INFRA-1103, 01-11); el HPA no escala mientras esté a 0
   revisionHistoryLimit: 1
   selector: { matchLabels: { app: libreplay-web } }
   template:
@@ -398,7 +431,8 @@ spec:
       enableServiceLinks: false
       imagePullSecrets:
         - name: harbor-pull
-      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      nodeSelector: { kubernetes.io/hostname: sauvage }
+      tolerations: [{ key: role, operator: Equal, value: edge, effect: NoSchedule }]
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
@@ -479,7 +513,7 @@ metadata:
     argocd.argoproj.io/sync-options: Replace=true
     argocd.argoproj.io/sync-wave: "4"
 spec:
-  replicas: 2
+  replicas: 0  # apagado (INFRA-1103, 01-11); el HPA no escala mientras esté a 0
   revisionHistoryLimit: 1
   selector: { matchLabels: { app: libreplay-worker } }
   template:
@@ -491,7 +525,8 @@ spec:
       enableServiceLinks: false
       imagePullSecrets:
         - name: harbor-pull
-      nodeSelector: { topology: lan, kubernetes.io/arch: amd64 }
+      nodeSelector: { kubernetes.io/hostname: sauvage }
+      tolerations: [{ key: role, operator: Equal, value: edge, effect: NoSchedule }]
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname

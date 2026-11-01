@@ -6,5 +6,5 @@ resources:
   - ha.yaml
   - grafana-dashboard.yaml
   - vmservicescrape.yaml
-  - vmprobe.yaml
-  - vmrule.yaml
+  # INFRA-1103 (01-11): libreplay apagado; sin sonda ni alertas hasta encenderlo
+  # (al encender, volver a añadir vmprobe.yaml y vmrule.yaml).
