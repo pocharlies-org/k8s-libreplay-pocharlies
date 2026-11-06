@@ -5,6 +5,13 @@
 #   * HorizontalPodAutoscaler scales each workload 2..4 on CPU pressure.
 # The stateful data plane (Postgres / Redis / Meili / MinIO / Mailpit) is
 # intentionally untouched here.
+#
+# INFRA-1103 (01-11): el stack está APAGADO (deployments a replicas 0). Un PDB
+# con minAvailable: 1 sobre 0 pods deja desiredHealthy=1 y currentHealthy=0, lo
+# que dispara KubePdbNotEnoughHealthyPods (warning) → Keep agrupa el síntoma por
+# namespace como «Deployment degradado» (DEPL-18542, SC-4724). Mientras el stack
+# esté a 0 los PDB van a minAvailable: 0; al reencender (subir replicas), volver
+# a 1 en el mismo cambio.
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -12,7 +19,7 @@ metadata:
   name: libreplay-web
   namespace: libreplay
 spec:
-  minAvailable: 1
+  minAvailable: 0  # apagado (INFRA-1103, 01-11); volver a 1 al reencender
   selector: { matchLabels: { app: libreplay-web } }
 ---
 apiVersion: policy/v1
@@ -21,7 +28,7 @@ metadata:
   name: libreplay-worker
   namespace: libreplay
 spec:
-  minAvailable: 1
+  minAvailable: 0  # apagado (INFRA-1103, 01-11); volver a 1 al reencender
   selector: { matchLabels: { app: libreplay-worker } }
 ---
 apiVersion: autoscaling/v2
